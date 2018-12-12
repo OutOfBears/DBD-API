@@ -3,7 +3,7 @@ Dead By Daylight API
 
 
 ## What is this for?
-It allows you to communicate with Dead By Daylight's backend
+It allows you to communicate with Dead By Daylight's backend, though if you have any suggestions for new things to add to the API, I may add them for you.
 
 ## What purpose does it serve?
 Currently I use it to retreive and display the shrine of secrets and output when the next one is.
