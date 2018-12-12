@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+PublishProfiles/
+
+.DS_Store
+Steamworks.NET.dll
+

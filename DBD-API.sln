@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DBD-API", "DBD-API\DBD-API.csproj", "{BB41E6CF-FF88-480B-B12D-A351794B6D85}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BB41E6CF-FF88-480B-B12D-A351794B6D85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB41E6CF-FF88-480B-B12D-A351794B6D85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB41E6CF-FF88-480B-B12D-A351794B6D85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB41E6CF-FF88-480B-B12D-A351794B6D85}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC271944-E01C-45EE-A19F-5D3B36384C19}
+	EndGlobalSection
+EndGlobal
