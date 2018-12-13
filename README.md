@@ -2,7 +2,7 @@
 Dead By Daylight API
 
 ## Requirements
-In order to run this application you need to have **steam open**, have the **steamworks SDK** and to use an account that actually owns dead by daylight.
+In order to run this application you need to have the **steam client open**, have the **steamworks SDK** and to use an account that actually owns dead by daylight.
 
 ## What is this for?
 It allows you to communicate with Dead By Daylight's backend, though if you have any suggestions for new things to add to the API, I may add them for you.
