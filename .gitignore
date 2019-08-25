@@ -4,5 +4,3 @@ sentry.bin
 bin/
 PublishProfiles/
 obj/
-x64/
-x86/

@@ -71,18 +71,11 @@ namespace DBD_API.Services
             Manager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
             Manager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
             Manager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
-            Manager.Subscribe<SteamUser.LoginKeyCallback>(OnLoginKey);
 
-            
+
             // internal subs
             Manager.Subscribe<SteamApps.GameConnectTokensCallback>(OnGcTokens);
         }
-
-        public async Task Test()
-        {
-            
-        }
-
         // methods
         public async Task<byte[]> GetAuthSessionTicket(GameID gameId)
         {
@@ -174,12 +167,6 @@ namespace DBD_API.Services
 
             Connected = true;
             Console.WriteLine("[Steam] We are connected! (user={0})", _config["steam_user"]);
-        }
-
-        private void OnLoginKey(SteamUser.LoginKeyCallback obj)
-        {
-            _user.AcceptNewLoginKey(obj);
-            _user.LogOff();
         }
 
         public void OnMachineAuth(SteamUser.UpdateMachineAuthCallback obj)

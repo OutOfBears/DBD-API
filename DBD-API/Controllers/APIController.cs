@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -43,7 +44,7 @@ namespace DBD_API.Controllers
                     specialevents = "GET /api/specialevents",
                 }
 
-            });
+            }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
         }
 
         // API content

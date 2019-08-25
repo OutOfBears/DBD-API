@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 using DBD_API.Services;
-using Joveler.Compression.ZLib;
 using Microsoft.Extensions.Configuration;
 
 namespace DBD_API
@@ -21,7 +21,6 @@ namespace DBD_API
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            ZLibInit.GlobalInit("x64/zlibwapi.dll");
 
             Action<string> ensureConfig = (name) =>
             {

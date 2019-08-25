@@ -5,7 +5,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Joveler.Compression.ZLib;
+using ICSharpCode.SharpZipLib;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
 namespace DBD_API.Modules.DbD
 {
@@ -98,6 +99,8 @@ namespace DBD_API.Modules.DbD
             return Encoding.UTF8.GetString(plain, 0, decryptcount);
         }
 
+
+
         public static string DecryptCdn(string content, string key)
         {
             content = content.Substring(8).Trim();
@@ -112,7 +115,11 @@ namespace DBD_API.Modules.DbD
 
             var b64Decoded = Convert.FromBase64String(transformed.Substring(8));
             var decoded = b64Decoded.Subset(4, b64Decoded.Length - 4);
-            var stream = new ZLibStream(new MemoryStream(decoded), ZLibMode.Decompress);
+
+            var stream = new MemoryStream();
+            var inputStream = new InflaterInputStream(new MemoryStream(decoded));
+            inputStream.CopyTo(stream);
+            stream.Position = 0;
 
             return Encoding.Unicode.GetString(ReadToEnd(stream));
 
