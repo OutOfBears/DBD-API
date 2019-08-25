@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -38,7 +40,7 @@ namespace DBD_API.Controllers
                     config = "GET /api/config",
                     catalog = "GET /api/catalog",
                     news = "GET /api/news",
-                    Featured = "GET /api/features",
+                    featured = "GET /api/featured",
                     schedule = "GET /api/schedule",
                     bloodpointEvents = "GET /api/bpevents",
                     specialevents = "GET /api/specialevents",
@@ -46,9 +48,40 @@ namespace DBD_API.Controllers
 
             }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
         }
+        
+
+        private static string CorrectPerkName(string name)
+        {
+            var weirdNames = new Dictionary<string, string>
+            {
+                { "InTheDark", "Knock Out" },
+                { "FranklinsLoss", "Franklins Demise" },
+                { "BBQAndChilli", "Barbecue & Chilli" },
+                { "Madgrit", "Mad Grit" },
+                { "GeneratorOvercharge", "Overcharge" }
+            };
+
+            if (weirdNames.ContainsKey(name))
+                return weirdNames[name];
+
+            var pattern = new Regex("([A-Z]([a-z0-9:]+))");
+            var matches = pattern.Matches(name)
+                .Select(match => match.Value)
+                .ToList();
+
+            if (matches.Count > 0)
+            {
+                if (matches[0] == "Hex")
+                    matches[0] = "Hex:";
+            }
+            else
+                matches.Add(name);
+
+            return matches.Join(" ");
+        }
+        
 
         // API content
-        
         public async Task<ActionResult> ShrineOfSecrets()
         {
             JObject shrine = null;
@@ -75,7 +108,7 @@ namespace DBD_API.Controllers
 
                         foreach(var item in items)
                         {
-                            var name = (string)item["id"];
+                            var name = CorrectPerkName((string)item["id"]);
                             var cost = item["cost"].ToArray();
                             if (!cost.Any())
                                 continue;
