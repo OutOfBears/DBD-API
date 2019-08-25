@@ -14,7 +14,6 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.Configuration;
 using SteamKit2;
-using Steamworks;
 
 namespace DBD_API.Services
 {

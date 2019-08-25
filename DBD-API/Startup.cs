@@ -31,7 +31,6 @@ namespace DBD_API
 
             ensureConfig("steam_user");
             ensureConfig("steam_pass");
-
         }
 
         public void ConfigureServices(IServiceCollection services)
