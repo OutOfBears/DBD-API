@@ -1,8 +1,7 @@
-bin/
-obj/
+
+sentry.bin
 .vs/
+bin/
 PublishProfiles/
-
-.DS_Store
-Steamworks.NET.dll
-
+obj/
+x64/

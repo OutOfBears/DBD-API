@@ -8,9 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 using DBD_API.Services;
+using Joveler.Compression.ZLib;
 using Microsoft.Extensions.Configuration;
-
-using Steamworks;
 
 namespace DBD_API
 {
@@ -22,20 +21,30 @@ namespace DBD_API
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            ZLibInit.GlobalInit("x64/zlibwapi.dll");
+
+            Action<string> ensureConfig = (name) =>
+            {
+                if(string.IsNullOrEmpty(configuration[name]))
+                    throw new Exception($"Failed to get setting {name}");
+            };
+
+            ensureConfig("steam_user");
+            ensureConfig("steam_pass");
+
         }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
             // services
-            services.AddSingleton<DBDService>();
+            services.AddSingleton<SteamService>();
+            services.AddSingleton<DdbService>();
+            services.AddHostedService<SteamEventService>();
 
             // mvc
             services.AddMvc();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
@@ -45,7 +54,7 @@ namespace DBD_API
 
             app.UseMvc(routes =>
             {
-                routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
+                routes.MapRoute("default", "{controller=API}/{action=Index}/{id?}");
             });
         }
     }

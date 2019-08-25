@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -12,19 +14,51 @@ namespace DBD_API.Controllers
 {
     public class APIController : Controller
     {
-        private DBDService dbdService;
+        private DdbService _dbdService;
 
         public APIController(
-            DBDService _dbdService
+            DdbService dbdService
         )
         {
-            this.dbdService = _dbdService;
+            _dbdService = dbdService;
         }
 
+        public ActionResult Index()
+        {
+            return Json(new
+            {
+                timestamp = DateTime.Now,
+                message = "Welcome :)",
+                contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
+                usage = new
+                {
+                    shrine = "GET /api/shrineofsecrets(?pretty=true)",
+                    store = "GET /api/outfits",
+                    config = "GET /api/config",
+                    catalog = "GET /api/catalog",
+                    news = "GET /api/news",
+                    Featured = "GET /api/features",
+                    schedule = "GET /api/schedule",
+                    bloodpointEvents = "GET /api/bpevents",
+                    specialevents = "GET /api/specialevents",
+                }
+
+            });
+        }
+
+        // API content
         
         public async Task<ActionResult> ShrineOfSecrets()
         {
-            var shrine = await dbdService.GetShrine();
+            JObject shrine = null;
+            try
+            {
+                shrine = await _dbdService.GetShrine();
+            }
+            catch (Exception)
+            {
+                return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
+            }
 
             if (!string.IsNullOrEmpty(Request.Query["pretty"]))
             {
@@ -42,12 +76,12 @@ namespace DBD_API.Controllers
                         {
                             var name = (string)item["id"];
                             var cost = item["cost"].ToArray();
-                            if (cost.Count() <= 0)
+                            if (!cost.Any())
                                 continue;
 
                             var price = (int)cost[0]["price"];
 
-                            output.Append(string.Format("{0} : {1}", name, price));
+                            output.Append($"{name} : {price}");
 
                             if (item != items.Last())
                                 output.Append(", ");
@@ -56,11 +90,8 @@ namespace DBD_API.Controllers
                         output.Append(" | ");
 
                         var changesIn = end - DateTime.Now;
-                        output.Append(string.Format("Shrine changes in {0} days, {1} hours, and {2} mins",
-                            changesIn.Days,
-                            changesIn.Hours,
-                            changesIn.Minutes
-                        ));
+                        output.Append(
+                            $"Shrine changes in {changesIn.Days} days, {changesIn.Hours} hours, and {changesIn.Minutes} mins");
 
                         return Content(output.ToString());
                     }
@@ -82,7 +113,37 @@ namespace DBD_API.Controllers
 
         public async Task<ActionResult> StoreOutfits()
         {
-            return Json(await dbdService.GetStoreOutfits());
+            try
+            {
+                return Json(await _dbdService.GetStoreOutfits());
+            }
+            catch
+            {
+                return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
+            }
         }
+
+        public async Task<ActionResult> Config() =>
+             Content(await _dbdService.GetApiConfig());
+
+        // CDN content
+
+        public async Task<ActionResult> Catalog()
+            => Conflict(await _dbdService.GetCdnContent("/gameinfo/catalog.json"));
+
+        public async Task<ActionResult> News()
+            => Content(await _dbdService.GetCdnContent("/news/newsContent.json"));
+
+        public async Task<ActionResult> Featured()
+            => Content(await _dbdService.GetCdnContent("/banners/featuredPageContent.json"));
+
+        public async Task<ActionResult> Schedule()
+            => Content(await _dbdService.GetCdnContent("/schedule/contentSchedule.json"));
+
+        public async Task<ActionResult> BPEvents()
+            => Content(await _dbdService.GetCdnContent("/bonusPointEvents/bonusPointEventsContent.json"));
+
+        public async Task<ActionResult> SpecialEvents()
+            => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json"));
     }
 }
