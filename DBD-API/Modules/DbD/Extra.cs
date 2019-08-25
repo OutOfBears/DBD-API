@@ -107,9 +107,9 @@ namespace DBD_API.Modules.DbD
             foreach (var t in decrypted)
                 transformed += (char)(t + 1);
 
+            transformed = transformed.Replace("\x01", "");
             if (!transformed.StartsWith("DbdDAQEB")) return transformed;
 
-            transformed = transformed.Replace("\x01", "");
             var b64Decoded = Convert.FromBase64String(transformed.Substring(8));
             var decoded = b64Decoded.Subset(4, b64Decoded.Length - 4);
             var stream = new ZLibStream(new MemoryStream(decoded), ZLibMode.Decompress);
