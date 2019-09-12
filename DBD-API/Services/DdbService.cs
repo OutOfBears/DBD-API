@@ -27,18 +27,18 @@ namespace DBD_API.Services
         private readonly IConfiguration _config;
 
         // not static
-        private SteamService _steamService;
+        //private SteamService _steamService;
         private CookieContainer _cookieJar;
         private RestClient _restClient;
         private RestClient _cdnRestClient;
 
         public DdbService(
-            SteamService steamService,
+            //SteamService steamService,
             IConfiguration config
         )
         {
             _config = config;
-            _steamService = steamService;
+            //_steamService = steamService;
             _cookieJar = new CookieContainer();
 
             Func<string, RestClient> initRestClient = host =>
@@ -52,7 +52,7 @@ namespace DBD_API.Services
             _cdnRestClient = initRestClient(CdnHost);
         }
 
-
+        /*
         private async Task<string> GetSteamSessionToken()
         {
             if (!_steamService.Connected) return "";
@@ -63,14 +63,16 @@ namespace DBD_API.Services
             Console.WriteLine("token {0}", token.Replace("-", string.Empty));
             return token.Replace("-", string.Empty);
         }
+        */
 
         public async Task<bool> UpdateSessionToken()
         {
-            var token = await GetSteamSessionToken();
-            if (string.IsNullOrEmpty(token)) return false;
+            //var token = await GetSteamSessionToken();
+            //if (string.IsNullOrEmpty(token)) return false;
 
-            var request = new RestRequest("api/v1/auth/provider/steam/login");
-            request.AddQueryParameter("token", token);
+            var request = new RestRequest("api/v1/auth/login/guest");
+            //var request = new RestRequest("api/v1/auth/provider/steam/login");
+            // request.AddQueryParameter("token", token);
             request.AddJsonBody(new
             {
                 clientData = new { consentId = "2" }
