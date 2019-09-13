@@ -59,13 +59,12 @@ namespace DBD_API.Controllers
                 { "BBQAndChilli", "Barbecue & Chilli" },
                 { "Madgrit", "Mad Grit" },
                 { "GeneratorOvercharge", "Overcharge" },
-                { "Dance", "Dance With Me" }
             };
 
             if (weirdNames.ContainsKey(name))
                 return weirdNames[name];
 
-            var pattern = new Regex("([A-Z]([a-z0-9:]+))");
+            var pattern = new Regex("([A-Za-z]([a-z0-9:]+))");
             var matches = pattern.Matches(name)
                 .Select(match => match.Value)
                 .ToList();
