@@ -58,7 +58,8 @@ namespace DBD_API.Controllers
                 { "FranklinsLoss", "Franklins Demise" },
                 { "BBQAndChilli", "Barbecue & Chilli" },
                 { "Madgrit", "Mad Grit" },
-                { "GeneratorOvercharge", "Overcharge" }
+                { "GeneratorOvercharge", "Overcharge" },
+                { "Dance", "Dance With Me" }
             };
 
             if (weirdNames.ContainsKey(name))
