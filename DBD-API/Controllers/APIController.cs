@@ -38,7 +38,7 @@ namespace DBD_API.Controllers
                 usage = new
                 {
                     shrine = "GET /api/shrineofsecrets(?pretty=true)",
-                    store = "GET /api/outfits",
+                    store = "GET /api/storeoutfits",
                     config = "GET /api/config",
                     catalog = "GET /api/catalog(?branch=live)",
                     news = "GET /api/news(?branch=live)",
@@ -145,7 +145,7 @@ namespace DBD_API.Controllers
             }
             else
             {
-                return Json(shrine);
+                return Json(shrine, new JsonSerializerSettings() { Formatting = Formatting.Indented });
             }
         }
 
@@ -153,7 +153,7 @@ namespace DBD_API.Controllers
         {
             try
             {
-                return Json(await _dbdService.GetStoreOutfits());
+                return Json(await _dbdService.GetStoreOutfits(), new JsonSerializerSettings() { Formatting = Formatting.Indented });
             }
             catch
             {
