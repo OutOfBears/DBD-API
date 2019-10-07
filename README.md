@@ -20,12 +20,13 @@ Currently, i've run it for around ~7k hours non-stop and haven't been banned, bu
 you can find it [here](https://dbd.wolfer.io)
 
 ## Endpoints
-1. /api/shrineofsecrets(?pretty=true)
-2. /api/outfits
-3. /api/config
-4. /api/catalog
-5. /api/news
-6. /api/features
-7. /api/schedule
-8. /api/bpevents
-9. /api/specialevents
+1.  /api/shrineofsecrets(?pretty=true)
+2.  /api/storeoutfits
+3.  /api/config
+4.  /api/catalog(?branch=live)
+5.  /api/news(?branch=live)
+6.  /api/features(?branch=live)
+7.  /api/schedule(?branch=live)
+8.  /api/bpevents(?branch=live)
+9.  /api/specialevents(?branch=live)
+10. /api/stories(?branch=ptb)
