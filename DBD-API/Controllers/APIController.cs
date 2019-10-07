@@ -28,6 +28,8 @@ namespace DBD_API.Controllers
 
         public ActionResult Index()
         {
+            var allowedPrefixes = DdbService.AllowedPrefixes.Join(", ");
+
             return Json(new
             {
                 timestamp = DateTime.Now,
@@ -38,13 +40,15 @@ namespace DBD_API.Controllers
                     shrine = "GET /api/shrineofsecrets(?pretty=true)",
                     store = "GET /api/outfits",
                     config = "GET /api/config",
-                    catalog = "GET /api/catalog",
-                    news = "GET /api/news",
-                    featured = "GET /api/featured",
-                    schedule = "GET /api/schedule",
-                    bloodpointEvents = "GET /api/bpevents",
-                    specialevents = "GET /api/specialevents",
-                }
+                    catalog = "GET /api/catalog(?branch=live)",
+                    news = "GET /api/news(?branch=live)",
+                    featured = "GET /api/featured(?branch=live)",
+                    schedule = "GET /api/schedule(?branch=live)",
+                    bloodpointEvents = "GET /api/bpevents(?branch=live)",
+                    specialevents = "GET /api/specialevents(?branch=live)",
+                    stories = "GET /api/stories(?branch=ptb)"
+                },
+                ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
 
             }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
         }
@@ -162,22 +166,25 @@ namespace DBD_API.Controllers
 
         // CDN content
 
-        public async Task<ActionResult> Catalog()
-            => Conflict(await _dbdService.GetCdnContent("/gameinfo/catalog.json"));
+        public async Task<ActionResult> Catalog(string branch = "live")
+            => Conflict(await _dbdService.GetCdnContent("/gameinfo/catalog.json", branch));
 
-        public async Task<ActionResult> News()
-            => Content(await _dbdService.GetCdnContent("/news/newsContent.json"));
+        public async Task<ActionResult> News(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/news/newsContent.json", branch));
 
-        public async Task<ActionResult> Featured()
-            => Content(await _dbdService.GetCdnContent("/banners/featuredPageContent.json"));
+        public async Task<ActionResult> Featured(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/banners/featuredPageContent.json", branch));
 
-        public async Task<ActionResult> Schedule()
-            => Content(await _dbdService.GetCdnContent("/schedule/contentSchedule.json"));
+        public async Task<ActionResult> Schedule(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/schedule/contentSchedule.json", branch));
 
-        public async Task<ActionResult> BPEvents()
-            => Content(await _dbdService.GetCdnContent("/bonusPointEvents/bonusPointEventsContent.json"));
+        public async Task<ActionResult> BPEvents(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/bonusPointEvents/bonusPointEventsContent.json", branch));
 
-        public async Task<ActionResult> SpecialEvents()
-            => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json"));
+        public async Task<ActionResult> SpecialEvents(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json", branch));
+
+        public async Task<ActionResult> Stories(string branch = "ptb")
+            => Content(await _dbdService.GetCdnContent("/gameinfo/archiveStories/v1/Tome01.json", branch));
     }
 }

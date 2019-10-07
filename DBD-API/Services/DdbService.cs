@@ -21,8 +21,16 @@ namespace DBD_API.Services
     {
         // static
         private const string ApiHost = "latest.live.dbd.bhvronline.com";
-
-        private const string CdnHost = "cdn.live.dbd.bhvronline.com";
+        
+        public static readonly string[] AllowedPrefixes =
+        {
+            "live",
+            "ptb",
+            "stage",
+            "dev",
+            "qa",
+            "cert"
+        };
 
         private readonly IConfiguration _config;
 
@@ -30,7 +38,6 @@ namespace DBD_API.Services
         //private SteamService _steamService;
         private CookieContainer _cookieJar;
         private RestClient _restClient;
-        private RestClient _cdnRestClient;
 
         public DdbService(
             //SteamService steamService,
@@ -40,17 +47,16 @@ namespace DBD_API.Services
             _config = config;
             //_steamService = steamService;
             _cookieJar = new CookieContainer();
-
-            Func<string, RestClient> initRestClient = host =>
-                new RestClient($"https://{host}")
-                {
-                    UserAgent = "DeadByDaylight/++DeadByDaylight+Live-CL-214681 Windows/10.0.17763.1.256.64bit",
-                    CookieContainer = _cookieJar
-                };
-
-            _restClient = initRestClient(ApiHost);
-            _cdnRestClient = initRestClient(CdnHost);
+            
+            _restClient = CreateDBDRestClient(ApiHost);
         }
+
+        private RestClient CreateDBDRestClient(string baseUrl)
+            => new RestClient($"https://{baseUrl}")
+            {
+                UserAgent = "DeadByDaylight/++DeadByDaylight+Live-CL-214681 Windows/10.0.17763.1.256.64bit",
+                CookieContainer = _cookieJar
+            };
 
         /*
         private async Task<string> GetSteamSessionToken()
@@ -150,13 +156,20 @@ namespace DBD_API.Services
 
         }
 
-        public async Task<string> GetCdnContent(string uri)
+        public async Task<string> GetCdnContent(string uri, string cdnPrefix = "live")
         {
             if (string.IsNullOrEmpty(_config["dbd_decrypt_key"]))
                 return "";
 
+            if (!AllowedPrefixes.Contains(cdnPrefix))
+                return "Disallowed cdn branch!";
+
+            var client = CreateDBDRestClient($"cdn.{cdnPrefix}.dbd.bhvronline.com");
             var request = new RestRequest(uri);
-            var response = await _cdnRestClient.ExecuteGetTaskAsync(request);
+            var response = await client.ExecuteGetTaskAsync(request);
+            if (!response.IsSuccessful)
+                return "Invalid response from DBD CDN";
+
             var body = Encoding.UTF8.GetString(response.RawBytes, 0, (int)response.ContentLength);
 
             return response.StatusCode != HttpStatusCode.OK ? "" : Modules.DbD.Extra.DecryptCdn(body, _config["dbd_decrypt_key"]);
