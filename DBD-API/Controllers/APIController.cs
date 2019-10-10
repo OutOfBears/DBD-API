@@ -59,6 +59,7 @@ namespace DBD_API.Controllers
             var weirdNames = new Dictionary<string, string>
             {
                 { "InTheDark", "Knock Out" },
+                { "SelfSufficient", "Unbreakable" },
                 { "FranklinsLoss", "Franklins Demise" },
                 { "BBQAndChilli", "Barbecue & Chilli" },
                 { "Madgrit", "Mad Grit" },
