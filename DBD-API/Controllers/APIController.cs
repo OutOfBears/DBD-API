@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DBD_API.Services;
@@ -46,7 +47,8 @@ namespace DBD_API.Controllers
                     schedule = "GET /api/schedule(?branch=live)",
                     bloodpointEvents = "GET /api/bpevents(?branch=live)",
                     specialevents = "GET /api/specialevents(?branch=live)",
-                    stories = "GET /api/stories(?branch=ptb)"
+                    archive = "GET /api/archive(?branch=ptb&tome=Tome01)",
+                    achiveRewardData = "GET /api/archiverewarddata(?branch=live)"
                 },
                 ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
 
@@ -166,9 +168,8 @@ namespace DBD_API.Controllers
              Content(await _dbdService.GetApiConfig());
 
         // CDN content
-
         public async Task<ActionResult> Catalog(string branch = "live")
-            => Conflict(await _dbdService.GetCdnContent("/gameinfo/catalog.json", branch));
+            => Content(await _dbdService.GetCdnContent("/gameinfo/catalog.json", branch));
 
         public async Task<ActionResult> News(string branch = "live")
             => Content(await _dbdService.GetCdnContent("/news/newsContent.json", branch));
@@ -185,7 +186,13 @@ namespace DBD_API.Controllers
         public async Task<ActionResult> SpecialEvents(string branch = "live")
             => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json", branch));
 
-        public async Task<ActionResult> Stories(string branch = "ptb")
-            => Content(await _dbdService.GetCdnContent("/gameinfo/archiveStories/v1/Tome01.json", branch));
+        public async Task<ActionResult> ArchiveRewardData(string branch = "live")
+            => Content(await _dbdService.GetCdnContent("/gameinfo/archiveRewardData/content.json", branch));
+
+        public async Task<ActionResult> Archive(string branch = "live", string tome = "Tome01")
+        {
+            tome = UrlEncoder.Create().Encode(tome);
+            return Content(await _dbdService.GetCdnContent($"/gameinfo/archiveStories/v1/{tome}.json", branch));
+        }
     }
 }
