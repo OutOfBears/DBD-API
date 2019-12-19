@@ -28,6 +28,7 @@
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="RestSharp" Version="106.6.10" />
     <PackageReference Include="SharpZipLib" Version="1.2.0" />
+    <PackageReference Include="SmartFormat.NET" Version="2.5.0" />
     <PackageReference Include="SteamKit2" Version="2.2.0" />
     <PackageReference Include="zlib.net" Version="1.0.4" />
   </ItemGroup>

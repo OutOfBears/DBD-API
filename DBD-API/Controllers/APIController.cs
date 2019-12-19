@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using DBD_API.Modules.DbD;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SmartFormat;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -38,9 +41,9 @@ namespace DBD_API.Controllers
                 contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
                 usage = new
                 {
-                    shrine = "GET /api/shrineofsecrets(?pretty=true)",
-                    store = "GET /api/storeoutfits",
-                    config = "GET /api/config",
+                    shrine = "GET /api/shrineofsecrets(?pretty=true&branch=live)",
+                    store = "GET /api/storeoutfits(?branch=live)",
+                    config = "GET /api/config(?branch=live)",
                     catalog = "GET /api/catalog(?branch=live)",
                     news = "GET /api/news(?branch=live)",
                     featured = "GET /api/featured(?branch=live)",
@@ -62,10 +65,20 @@ namespace DBD_API.Controllers
             {
                 { "InTheDark", "Knock Out" },
                 { "SelfSufficient", "Unbreakable" },
-                { "FranklinsLoss", "Franklins Demise" },
+                { "FranklinsLoss", "Franklin's Demise" },
                 { "BBQAndChilli", "Barbecue & Chilli" },
                 { "Madgrit", "Mad Grit" },
                 { "GeneratorOvercharge", "Overcharge" },
+                { "TheMettleOfMan", "Mettle Of Man" },
+                { "pop_goes_the_weasel", "Pop Goes The Weasel" },
+                { "MonitorAndAbuse", "Monitor & Abuse" },
+                { "No_One_Escapes_Death", "Hex: No One Escapes Death" },
+                { "HangmansTrick", "Hangman's Trick" },
+                { "ImAllEars", "I'm All Ears" },
+                { "NurseCalling", "A Nurse's Calling" },
+                { "WellMakeIt", "We'll Make It" },
+                { "WakeUp", "Wake Up!" },
+                { "Plunderers_Instinct", "Plunderer's Instinct" }
             };
 
             if (weirdNames.ContainsKey(name))
@@ -89,48 +102,63 @@ namespace DBD_API.Controllers
         
 
         // API content
-        public async Task<ActionResult> ShrineOfSecrets()
+        public async Task<ActionResult> ShrineOfSecrets(string branch = "live")
         {
-            JObject shrine = null;
+            ShrineResponse shrine = null;
+
             try
             {
-                shrine = await _dbdService.GetShrine();
+                shrine = await _dbdService.GetShrine(branch);
             }
             catch (Exception)
             {
                 return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
             }
 
+            if (shrine == null)
+                return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
+
+            foreach (var item in shrine.Items)
+                item.Name = CorrectPerkName(item.Id);
+
+            var format = (string) Request.Query["format"];
             if (!string.IsNullOrEmpty(Request.Query["pretty"]))
             {
-                if(shrine != null)
+                if (!string.IsNullOrEmpty(format))
                 {
                     try
                     {
-                        var output = new StringBuilder();
-
-                        var items = shrine["items"].ToArray();
-                        var start = (DateTime)shrine["startDate"];
-                        var end = (DateTime)shrine["endDate"];
-
-                        foreach(var item in items)
+                        return Content(Smart.Format(format, shrine));
+                    }
+                    catch (Exception e)
+                    {
+                        return Json(new
                         {
-                            var name = CorrectPerkName((string)item["id"]);
-                            var cost = item["cost"].ToArray();
-                            if (!cost.Any())
+                            success = false,
+                            type = "Format Exception",
+                            reason = e.Message
+                        });
+                    }
+                }
+                else
+                    try
+                    {
+                        var output = new StringBuilder();
+                        
+                        foreach(var item in shrine.Items)
+                        {
+                            if (!item.Cost.Any())
                                 continue;
+                            
+                            output.Append($"{item.Name} : {item.Cost[0].Price}");
 
-                            var price = (int)cost[0]["price"];
-
-                            output.Append($"{name} : {price}");
-
-                            if (item != items.Last())
+                            if (item != shrine.Items.Last())
                                 output.Append(", ");
                         }
 
                         output.Append(" | ");
 
-                        var changesIn = end - DateTime.Now;
+                        var changesIn = shrine.EndDate - DateTime.Now;
                         output.Append(
                             $"Shrine changes in {changesIn.Days} days, {changesIn.Hours} hours, and {changesIn.Minutes} mins");
 
@@ -140,11 +168,6 @@ namespace DBD_API.Controllers
                     {
                         return Content("Uhhhh, we failed to parse the data retrieved, contact me to fix");
                     }
-                }
-                else
-                {
-                    return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
-                }
             }
             else
             {
@@ -152,11 +175,11 @@ namespace DBD_API.Controllers
             }
         }
 
-        public async Task<ActionResult> StoreOutfits()
+        public async Task<ActionResult> StoreOutfits(string branch = "live")
         {
             try
             {
-                return Json(await _dbdService.GetStoreOutfits(), new JsonSerializerSettings() { Formatting = Formatting.Indented });
+                return Json(await _dbdService.GetStoreOutfits(branch), new JsonSerializerSettings() { Formatting = Formatting.Indented });
             }
             catch
             {
@@ -164,8 +187,8 @@ namespace DBD_API.Controllers
             }
         }
 
-        public async Task<ActionResult> Config() =>
-             Content(await _dbdService.GetApiConfig());
+        public async Task<ActionResult> Config(string branch = "live") =>
+             Content(await _dbdService.GetApiConfig(branch));
 
         // CDN content
         public async Task<ActionResult> Catalog(string branch = "live")

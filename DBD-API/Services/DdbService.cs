@@ -11,8 +11,10 @@ using RestSharp;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using DBD_API.Modules.DbD;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using SteamKit2;
 
 namespace DBD_API.Services
@@ -20,8 +22,6 @@ namespace DBD_API.Services
     public class DdbService
     {
         // static
-        private const string ApiHost = "latest.live.dbd.bhvronline.com";
-        
         public static readonly string[] AllowedPrefixes =
         {
             "live",
@@ -37,7 +37,8 @@ namespace DBD_API.Services
         // not static
         //private SteamService _steamService;
         private CookieContainer _cookieJar;
-        private RestClient _restClient;
+        private Dictionary<string, RestClient> _restClients;
+        private Dictionary<string, RestClient> _restCdnClients;
 
         public DdbService(
             //SteamService steamService,
@@ -48,7 +49,14 @@ namespace DBD_API.Services
             //_steamService = steamService;
             _cookieJar = new CookieContainer();
             
-            _restClient = CreateDBDRestClient(ApiHost);
+            _restClients = new Dictionary<string, RestClient>();
+            _restCdnClients = new Dictionary<string, RestClient>();
+
+            foreach (var api in AllowedPrefixes)
+            {
+                _restClients[api] = CreateDBDRestClient($"latest.{api}.dbd.bhvronline.com");
+                _restCdnClients[api] = CreateDBDRestClient($"cdn.{api}.dbd.bhvronline.com");
+            }
         }
 
         private RestClient CreateDBDRestClient(string baseUrl)
@@ -71,10 +79,12 @@ namespace DBD_API.Services
         }
         */
 
-        public async Task<bool> UpdateSessionToken()
+        public async Task<bool> UpdateSessionToken(string branch = "live")
         {
             //var token = await GetSteamSessionToken();
             //if (string.IsNullOrEmpty(token)) return false;
+            if (!_restClients.ContainsKey(branch))
+                return false;
 
             var request = new RestRequest("api/v1/auth/login/guest");
             //var request = new RestRequest("api/v1/auth/provider/steam/login");
@@ -84,7 +94,7 @@ namespace DBD_API.Services
                 clientData = new { consentId = "2" }
             });
 
-            var response = await _restClient.ExecutePostTaskAsync(request);
+            var response = await _restClients[branch].ExecutePostTaskAsync(request);
             if(response.StatusCode == HttpStatusCode.OK)
                 foreach(var cookie in response.Cookies)
                 {
@@ -100,9 +110,13 @@ namespace DBD_API.Services
             return false;
         }
 
-        public async Task<JObject> GetShrine()
+        public async Task<ShrineResponse> GetShrine(string branch = "live")
         {
             var retries = 0;
+
+            if (!_restClients.ContainsKey(branch))
+                return null;
+
             while (true)
             {
                 if (retries > 3) return null;
@@ -110,50 +124,54 @@ namespace DBD_API.Services
                 var restRequest = new RestRequest("api/v1/extensions/shrine/getAvailable");
                 restRequest.AddJsonBody(new {data = new {version = "steam"}});
 
-                var response = await _restClient.ExecutePostTaskAsync(restRequest);
+                var response = await _restClients[branch].ExecutePostTaskAsync(restRequest);
                 if (response.StatusCode == HttpStatusCode.OK)
-                    return JObject.Parse(Encoding.ASCII.GetString(response.RawBytes));
+                    return JsonConvert.DeserializeObject<ShrineResponse>(Encoding.ASCII.GetString(response.RawBytes));
 
                 else
                 {
-                    await UpdateSessionToken();
+                    await UpdateSessionToken(branch);
                     retries += 1;
                 }
             }
         }
 
-        public async Task<JObject> GetStoreOutfits()
+        public async Task<JObject> GetStoreOutfits(string branch = "live")
         {
+            if (!_restClients.ContainsKey(branch))
+                return null;
+
             var restRequest = new RestRequest("api/v1/extensions/store/getOutfits");
             restRequest.AddJsonBody(new
             {
                 data = new { }
             });
 
-            var response = await _restClient.ExecutePostTaskAsync(restRequest);
+            var response = await _restClients[branch].ExecutePostTaskAsync(restRequest);
             return response.StatusCode == HttpStatusCode.OK ? JObject.Parse(Encoding.ASCII.GetString(response.RawBytes)) : null;
         }
 
-        public async Task<string> GetApiConfig()
+        public async Task<string> GetApiConfig(string branch = "live")
         {
+            if (!_restClients.ContainsKey(branch))
+                return "Disallowed api branch!";
+
             var retries = 0;
             while (true)
             {
                 if (retries > 3) return null;
 
                 var restRequest = new RestRequest("/api/v1/config");
-                var response = await _restClient.ExecuteGetTaskAsync(restRequest);
+                var response = await _restClients[branch].ExecuteGetTaskAsync(restRequest);
                 if (response.StatusCode == HttpStatusCode.OK)
                     return Encoding.ASCII.GetString(response.RawBytes);
 
                 else
                 {
-                    await UpdateSessionToken();
+                    await UpdateSessionToken(branch);
                     retries += 1;
                 }
             }
-
-
         }
 
         public async Task<string> GetCdnContent(string uri, string cdnPrefix = "live")
@@ -161,12 +179,11 @@ namespace DBD_API.Services
             if (string.IsNullOrEmpty(_config["dbd_decrypt_key"]))
                 return "";
 
-            if (!AllowedPrefixes.Contains(cdnPrefix))
+            if (!_restCdnClients.ContainsKey(cdnPrefix))
                 return "Disallowed cdn branch!";
 
-            var client = CreateDBDRestClient($"cdn.{cdnPrefix}.dbd.bhvronline.com");
             var request = new RestRequest(uri);
-            var response = await client.ExecuteGetTaskAsync(request);
+            var response = await _restCdnClients[cdnPrefix].ExecuteGetTaskAsync(request);
             if (!response.IsSuccessful)
                 return "Invalid response from DBD CDN";
 
