@@ -22,42 +22,67 @@ namespace DBD_API.Controllers
     public class APIController : Controller
     {
         private DdbService _dbdService;
+        private SteamService _steamService;
+
+        // thanks for the help tricky
+        private static readonly uint[] _rankSet = {
+            // start, end, rank
+            0, 2, 20,	// rank 20
+            3, 5, 19,	// rank 19
+            6, 9, 18,	// rank 18
+            10, 13, 17,	// rank 17
+            14, 17, 16,	// rank 16
+            18, 21, 15,	// rank 15
+            22, 25, 14,	// rank 14
+            26, 29, 13,	// rank 13
+            30, 34, 12,	// rank 12
+            35, 39, 11,	// rank 11
+            40, 44, 10,	// rank 10
+            45, 49, 9,	// rank 9
+            50, 54, 8,	// rank 8
+            55, 59, 7,	// rank 7
+            60, 64, 6,	// rank 6
+            65, 69, 5,	// rank 5
+            70, 74, 4,	// rank 4
+            75, 79, 3,	// rank 3
+            80, 84, 2,	// rank 2
+            85, 89, 1,	// rank 1
+        };
+
+        // the purpose of this is to make the output more readable
+        private static readonly Dictionary<string, string> _statsProxy = new Dictionary<string, string>()
+        {
+            { "survivorsMorid", "DBD_KilledCampers" },
+            { "survivorsSacrified", "DBD_SacrificedCampers" },
+            { "escapes", "DBD_Escape" },
+            { "escapesKO", "DBD_EscapeKO" },
+            { "escapesWithItem", "DBD_CamperNewItem" },
+            { "chainsawHits", "DBD_ChainsawHit" },
+            { "skillCheckSuccesses", "DBD_SkillCheckSuccess" },
+            { "uncloakAttacks", "DBD_UncloakAttack" },
+            { "hatchEscapes", "DBD_EscapeThroughHatch" },
+            { "ultraRareOfferingsBurned", "DBD_BurnOffering_UltraRare" },
+            { "hitsNearHook", "DBD_HitNearHook" }
+        };
 
         public APIController(
-            DdbService dbdService
+            DdbService dbdService,
+            SteamService steamService
         )
         {
             _dbdService = dbdService;
+            _steamService = steamService;
         }
 
-        public ActionResult Index()
+
+        private static int PipsToRank(uint rank)
         {
-            var allowedPrefixes = DdbService.AllowedPrefixes.Join(", ");
+            for(var i = 2; i < _rankSet.Length; i += 3)
+                if (rank >= _rankSet[i - 2] && rank <= _rankSet[i - 1])
+                    return (int)_rankSet[i];
 
-            return Json(new
-            {
-                timestamp = DateTime.Now,
-                message = "Welcome :)",
-                contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
-                usage = new
-                {
-                    shrine = "GET /api/shrineofsecrets(?pretty=true&branch=live)",
-                    store = "GET /api/storeoutfits(?branch=live)",
-                    config = "GET /api/config(?branch=live)",
-                    catalog = "GET /api/catalog(?branch=live)",
-                    news = "GET /api/news(?branch=live)",
-                    featured = "GET /api/featured(?branch=live)",
-                    schedule = "GET /api/schedule(?branch=live)",
-                    bloodpointEvents = "GET /api/bpevents(?branch=live)",
-                    specialevents = "GET /api/specialevents(?branch=live)",
-                    archive = "GET /api/archive(?branch=ptb&tome=Tome01)",
-                    achiveRewardData = "GET /api/archiverewarddata(?branch=live)"
-                },
-                ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
-
-            }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
+            return -1;
         }
-        
 
         private static string CorrectPerkName(string name)
         {
@@ -99,9 +124,63 @@ namespace DBD_API.Controllers
 
             return matches.Join(" ");
         }
-        
+
 
         // API content
+        public ActionResult Index()
+        {
+            var allowedPrefixes = DdbService.AllowedPrefixes.Join(", ");
+
+            return Json(new
+            {
+                timestamp = DateTime.Now,
+                message = "Welcome :)",
+                contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
+                usage = new
+                {
+                    stats = "GET /api/stats/:steam_64: (Profile needs to be public)",
+                    shrine = "GET /api/shrineofsecrets(?pretty=true&branch=live)",
+                    store = "GET /api/storeoutfits(?branch=live)",
+                    config = "GET /api/config(?branch=live)",
+                    catalog = "GET /api/catalog(?branch=live)",
+                    news = "GET /api/news(?branch=live)",
+                    featured = "GET /api/featured(?branch=live)",
+                    schedule = "GET /api/schedule(?branch=live)",
+                    bloodpointEvents = "GET /api/bpevents(?branch=live)",
+                    specialevents = "GET /api/specialevents(?branch=live)",
+                    archive = "GET /api/archive(?branch=ptb&tome=Tome01)",
+                    achiveRewardData = "GET /api/archiverewarddata(?branch=live)"
+                },
+                ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
+
+            }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
+        }
+
+        public async Task<ActionResult> Stats(ulong id = 0)
+        {
+            if (id == 0)
+                return BadRequest("Invalid data, please pass steamid64");
+
+            Dictionary<string, double> data = new Dictionary<string, double>();
+            var result = await _steamService.GetUserStats(381210, id);
+            if (result == null || result.Equals(default(Dictionary<string, double>)))
+                return UnprocessableEntity("Unable to get player stats, maybe their profile isn't public");
+
+            data["killerRank"] = result.ContainsKey("DBD_KillerSkulls") ?
+                PipsToRank((uint)result["DBD_KillerSkulls"]) : 20;
+
+            data["survivorRank"] = result.ContainsKey("DBD_CamperSkulls") ?
+                PipsToRank((uint)result["DBD_CamperSkulls"]) : 20;
+
+            foreach (var stat in _statsProxy)
+                if (result.ContainsKey(stat.Value))
+                    data[stat.Key] = result[stat.Value];
+                else
+                    data[stat.Key] = 0;
+            
+            return Json(data);
+        }
+
         public async Task<ActionResult> ShrineOfSecrets(string branch = "live")
         {
             ShrineResponse shrine = null;
@@ -109,15 +188,14 @@ namespace DBD_API.Controllers
             try
             {
                 shrine = await _dbdService.GetShrine(branch);
+                if (shrine == null)
+                    throw new InvalidOperationException();
             }
             catch (Exception)
             {
                 return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
             }
-
-            if (shrine == null)
-                return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
-
+            
             foreach (var item in shrine.Items)
                 item.Name = CorrectPerkName(item.Id);
 
@@ -192,30 +270,30 @@ namespace DBD_API.Controllers
 
         // CDN content
         public async Task<ActionResult> Catalog(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/gameinfo/catalog.json", branch));
+            => Content(await _dbdService.GetCdnContent("/gameinfo/catalog.json", branch), "application/json");
 
         public async Task<ActionResult> News(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/news/newsContent.json", branch));
+            => Content(await _dbdService.GetCdnContent("/news/newsContent.json", branch), "application/json");
 
         public async Task<ActionResult> Featured(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/banners/featuredPageContent.json", branch));
+            => Content(await _dbdService.GetCdnContent("/banners/featuredPageContent.json", branch), "application/json");
 
         public async Task<ActionResult> Schedule(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/schedule/contentSchedule.json", branch));
+            => Content(await _dbdService.GetCdnContent("/schedule/contentSchedule.json", branch), "application/json");
 
         public async Task<ActionResult> BPEvents(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/bonusPointEvents/bonusPointEventsContent.json", branch));
+            => Content(await _dbdService.GetCdnContent("/bonusPointEvents/bonusPointEventsContent.json", branch), "application/json");
 
         public async Task<ActionResult> SpecialEvents(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json", branch));
+            => Content(await _dbdService.GetCdnContent("/specialEvents/specialEventsContent.json", branch), "application/json");
 
         public async Task<ActionResult> ArchiveRewardData(string branch = "live")
-            => Content(await _dbdService.GetCdnContent("/gameinfo/archiveRewardData/content.json", branch));
+            => Content(await _dbdService.GetCdnContent("/gameinfo/archiveRewardData/content.json", branch), "application/json");
 
         public async Task<ActionResult> Archive(string branch = "live", string tome = "Tome01")
         {
             tome = UrlEncoder.Create().Encode(tome);
-            return Content(await _dbdService.GetCdnContent($"/gameinfo/archiveStories/v1/{tome}.json", branch));
+            return Content(await _dbdService.GetCdnContent($"/gameinfo/archiveStories/v1/{tome}.json", branch), "application/json");
         }
     }
 }

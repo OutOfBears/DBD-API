@@ -22,24 +22,22 @@ namespace DBD_API
         {
             Configuration = configuration;
 
-            /*
             Action<string> ensureConfig = (name) =>
             {
                 if(string.IsNullOrEmpty(configuration[name]))
                     throw new Exception($"Failed to get setting {name}");
             };
-            */
 
-            //ensureConfig("steam_user");
-            //ensureConfig("steam_pass");
+            ensureConfig("steam_user");
+            ensureConfig("steam_pass");
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
             // services
-            // services.AddSingleton<SteamService>();
+            services.AddSingleton<SteamService>();
             services.AddSingleton<DdbService>();
-            //services.AddHostedService<SteamEventService>();
+            services.AddHostedService<SteamEventService>();
 
             // mvc
             services.AddMvc();

@@ -66,6 +66,17 @@ namespace DBD_API.Services
                 CookieContainer = _cookieJar
             };
 
+        private string InvalidResponseJson(string reason)
+        {
+            try
+            {
+                return JsonConvert.SerializeObject(new { error = reason, success = "false" });
+            } catch (Exception e)
+            {
+                return string.Format("Json Serailize Error: {0}", e.Message);
+            }
+        }
+
         /*
         private async Task<string> GetSteamSessionToken()
         {
@@ -154,7 +165,7 @@ namespace DBD_API.Services
         public async Task<string> GetApiConfig(string branch = "live")
         {
             if (!_restClients.ContainsKey(branch))
-                return "Disallowed api branch!";
+                return InvalidResponseJson("Disallowed api branch!");
 
             var retries = 0;
             while (true)
@@ -177,15 +188,15 @@ namespace DBD_API.Services
         public async Task<string> GetCdnContent(string uri, string cdnPrefix = "live")
         {
             if (string.IsNullOrEmpty(_config["dbd_decrypt_key"]))
-                return "";
+                return InvalidResponseJson("Invalid decryption key!");
 
             if (!_restCdnClients.ContainsKey(cdnPrefix))
-                return "Disallowed cdn branch!";
+                return InvalidResponseJson("Disallowed cdn branch!");
 
             var request = new RestRequest(uri);
             var response = await _restCdnClients[cdnPrefix].ExecuteGetTaskAsync(request);
             if (!response.IsSuccessful)
-                return "Invalid response from DBD CDN";
+                return InvalidResponseJson("Invalid response from DBD CDN");
 
             var body = Encoding.UTF8.GetString(response.RawBytes, 0, (int)response.ContentLength);
 

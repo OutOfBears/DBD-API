@@ -33,4 +33,17 @@ namespace DBD_API.Modules.Steam
             MessageSequence = body.message_sequence;
         }
     }
+
+    public class SteamTicketAuth : ClientMsgHandler
+    {
+        public override void HandleMsg(IPacketMsg packetMsg)
+        {
+            if (packetMsg.MsgType != EMsg.ClientAuthListAck)
+                return;
+
+            var authAck = new ClientMsgProtobuf<CMsgClientAuthListAck>(packetMsg);
+            var acknowledged = new SteamTicketAccepted(authAck.TargetJobID, authAck.Body);
+            Client.PostCallback(acknowledged);
+        }
+    }
 }

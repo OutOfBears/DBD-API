@@ -18,7 +18,8 @@ namespace DBD_API
                 {
                     config.AddEnvironmentVariables();
                     config.SetBasePath(Directory.GetCurrentDirectory());
-                    config.AddJsonFile("config.json", optional: false, reloadOnChange: true);
+                    config.AddJsonFile("config.json", optional: true, reloadOnChange: true);
+                    config.AddYamlFile("config.yml", optional: true);
                 })
                 .UseStartup<Startup>();
     }

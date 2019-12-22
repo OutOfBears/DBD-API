@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using SteamKit2;
 using SteamKit2.Internal;
+
 using EResult = SteamKit2.EResult;
 using SteamApps = SteamKit2.SteamApps;
 using SteamClient = SteamKit2.SteamClient;
@@ -41,6 +42,7 @@ namespace DBD_API.Services
         public SteamClient Client;
         private SteamUser _user;
         private SteamApps _apps;
+        private SteamUserStats _userStats;
 
         public SteamService(IConfiguration config)
         {
@@ -63,15 +65,16 @@ namespace DBD_API.Services
 
             _user = Client.GetHandler<SteamUser>();
             _apps = Client.GetHandler<SteamApps>();
+            _userStats = Client.GetHandler<SteamUserStats>();
 
             Client.AddHandler(new SteamTicketAuth());
+            Client.AddHandler(new SteamStatsHandler());
 
             // subscriptions
             Manager.Subscribe<SteamClient.DisconnectedCallback>(OnDisconnected);
             Manager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
             Manager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
             Manager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
-
 
             // internal subs
             Manager.Subscribe<SteamApps.GameConnectTokensCallback>(OnGcTokens);
@@ -109,6 +112,46 @@ namespace DBD_API.Services
 
         }
 
+        public async Task<bool> DownloadGameFileAsync(GameID appId, string branch, string file)
+        {
+            if (!Connected)
+                throw new Exception("Not connected to stream");
+
+
+
+
+            return false;
+        }
+
+        public async Task<Dictionary<string, double>> GetUserStats(GameID gameId, SteamID steamId)
+        {
+            var response = await RequestUserStats(gameId, steamId);
+            if (response.Result != EResult.OK || response.Schema == null)
+                return null;
+
+            var results = new Dictionary<string, double>();
+            var schema = response.ParsedSchema;
+            var stats = schema.Children.FirstOrDefault(x => x.Name == "stats");
+            if (stats.Equals(default(Dictionary<string, double>)))
+                goto exit;
+
+            foreach (var stat in stats.Children)
+            {
+                var statName = stat.Children.FirstOrDefault(x => x.Name == "name");
+                if (statName == null || statName.Equals(default(KeyValue)))
+                    continue;
+
+                var statValue = response.Stats.FirstOrDefault(x => Convert.ToString(x.stat_id) == stat.Name);
+                if (statValue == null || statValue.Equals(default(CMsgClientGetUserStatsResponse.Stats)))
+                    continue;
+
+                results.TryAdd(statName.Value, statValue.stat_value);
+            }
+
+        exit:
+            return results;
+        }
+
         // internals
         private void CreateAuthTicket(byte[] gcToken, BinaryWriter stream)
         {
@@ -138,7 +181,7 @@ namespace DBD_API.Services
                 ticket_crc = crc
             });
 
-            var authList = new ClientMsgProtobuf<CMsgClientAuthList>(EMsg.ClientAuthList, 64);
+            var authList = new ClientMsgProtobuf<CMsgClientAuthList>(EMsg.ClientAuthList);
             authList.Body.tokens_left = (uint) _gcTokens.Count;
             authList.Body.app_ids.AddRange(_gameTickets.Keys);
             authList.Body.tickets.AddRange(_gameTickets.Values.SelectMany(x => x));
@@ -146,6 +189,20 @@ namespace DBD_API.Services
             Client.Send(authList);
 
             return new AsyncJob<SteamTicketAccepted>(Client, authList.SourceJobID);
+        }
+
+        private AsyncJob<SteamUserStatsResponse> RequestUserStats(GameID appId, SteamID steamId)
+        {
+            var getUserStats = new ClientMsgProtobuf<CMsgClientGetUserStats>(EMsg.ClientGetUserStats);
+            getUserStats.Body.game_id = appId;
+            getUserStats.Body.game_idSpecified = true;
+            getUserStats.Body.steam_id_for_user = steamId;
+            getUserStats.Body.steam_id_for_userSpecified = true;
+
+            getUserStats.SourceJobID = Client.GetNextJobID();
+            Client.Send(getUserStats);
+
+            return new AsyncJob<SteamUserStatsResponse>(Client, getUserStats.SourceJobID);
         }
 
         // events
