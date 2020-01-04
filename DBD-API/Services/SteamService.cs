@@ -123,6 +123,16 @@ namespace DBD_API.Services
             return false;
         }
 
+        // TODO: implement me
+        public async Task GetUserAchievements(GameID gameId, SteamID steamId)
+        {
+            var response = await RequestUserStats(gameId, steamId);
+            //if (response.Result != EResult.OK || response.AchievementBlocks == null)
+                //return null;
+
+            //return response.AchievementBlocks;
+        }
+
         public async Task<Dictionary<string, double>> GetUserStats(GameID gameId, SteamID steamId)
         {
             var response = await RequestUserStats(gameId, steamId);

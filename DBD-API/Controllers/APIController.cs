@@ -1,4 +1,4 @@
-﻿using System;
+﻿    using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -57,12 +57,18 @@ namespace DBD_API.Controllers
             { "escapes", "DBD_Escape" },
             { "escapesKO", "DBD_EscapeKO" },
             { "escapesWithItem", "DBD_CamperNewItem" },
+            { "escapesWithChestItem", "DBD_CamperEscapeWithItemFrom" },
+            { "escapesWithNoDamageObsession", "DBD_EscapeNoBlood_Obsession" },
             { "chainsawHits", "DBD_ChainsawHit" },
             { "skillCheckSuccesses", "DBD_SkillCheckSuccess" },
             { "uncloakAttacks", "DBD_UncloakAttack" },
             { "hatchEscapes", "DBD_EscapeThroughHatch" },
             { "ultraRareOfferingsBurned", "DBD_BurnOffering_UltraRare" },
-            { "hitsNearHook", "DBD_HitNearHook" }
+            { "hitsNearHook", "DBD_HitNearHook" },
+            { "totalBpSpent", "DBD_BloodwebPoints" },
+            { "allSurvivorsEscapedThruHatch", "DBD_AllEscapeThroughHatch" },
+            { "trapsPickedUp", "DBD_TrapPickup" },
+            { "timesHitNearHook", "DBD_HitNearHook" }
         };
 
         public APIController(
@@ -179,6 +185,17 @@ namespace DBD_API.Controllers
                     data[stat.Key] = 0;
             
             return Json(data);
+        }
+
+        // TODO: implement me
+        public async Task<ActionResult> Achievements(ulong id = 0)
+        {
+            return UnprocessableEntity("Not implemented yet");
+            /*
+            if (id == 0) return BadRequest("Invalid data, please pass steamid64");
+            var result = await _steamService.GetUserStats(381210, id);
+            return Ok();
+            */
         }
 
         public async Task<ActionResult> ShrineOfSecrets(string branch = "live")
