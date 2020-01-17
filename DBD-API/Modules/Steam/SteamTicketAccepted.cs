@@ -40,7 +40,7 @@ namespace DBD_API.Modules.Steam
         {
             if (packetMsg.MsgType != EMsg.ClientAuthListAck)
                 return;
-
+            
             var authAck = new ClientMsgProtobuf<CMsgClientAuthListAck>(packetMsg);
             var acknowledged = new SteamTicketAccepted(authAck.TargetJobID, authAck.Body);
             Client.PostCallback(acknowledged);

@@ -1,23 +1,19 @@
 ﻿// credit: jesterret (b1g credit)
 // saved me a bunch of money with steamkit suggestion + example :)
 
+using DBD_API.Modules.Steam;
+using Microsoft.Extensions.Configuration;
+using SteamKit2;
+using SteamKit2.Internal;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
-using DBD_API.Modules.Steam;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using SteamKit2;
-using SteamKit2.Internal;
-
 using EResult = SteamKit2.EResult;
+using LicenseList = System.Collections.Generic.List<SteamKit2.SteamApps.LicenseListCallback.License>;
 using SteamApps = SteamKit2.SteamApps;
 using SteamClient = SteamKit2.SteamClient;
 using SteamUser = SteamKit2.SteamUser;
@@ -29,9 +25,11 @@ namespace DBD_API.Services
     {
         private readonly IConfiguration _config;
 
+        public readonly TaskCompletionSource<bool> LicenseCompletionSource;
+        public LicenseList Licenses;
         public bool Connected;
         public bool KeepAlive;
-        
+
         // token grabbing
         private ConcurrentQueue<byte[]> _gcTokens;
         private TaskCompletionSource<bool> _gcTokensComplete;
@@ -54,6 +52,9 @@ namespace DBD_API.Services
             _gcTokensComplete = new TaskCompletionSource<bool>();
             _gameTickets = new ConcurrentDictionary<uint, List<CMsgAuthTicket>>();
 
+            Licenses = new LicenseList();
+            LicenseCompletionSource = new TaskCompletionSource<bool>(false);
+
             InitializeClient();
         }
 
@@ -75,10 +76,12 @@ namespace DBD_API.Services
             Manager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
             Manager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
             Manager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
+            Manager.Subscribe<SteamApps.LicenseListCallback>(OnLicenseList);
 
             // internal subs
             Manager.Subscribe<SteamApps.GameConnectTokensCallback>(OnGcTokens);
         }
+
         // methods
         public async Task<byte[]> GetAuthSessionTicket(GameID gameId)
         {
@@ -112,23 +115,13 @@ namespace DBD_API.Services
 
         }
 
-        public async Task<bool> DownloadGameFileAsync(GameID appId, string branch, string file)
-        {
-            if (!Connected)
-                throw new Exception("Not connected to stream");
-
-
-
-
-            return false;
-        }
 
         // TODO: implement me
         public async Task GetUserAchievements(GameID gameId, SteamID steamId)
         {
             var response = await RequestUserStats(gameId, steamId);
             //if (response.Result != EResult.OK || response.AchievementBlocks == null)
-                //return null;
+            //return null;
 
             //return response.AchievementBlocks;
         }
@@ -192,7 +185,7 @@ namespace DBD_API.Services
             });
 
             var authList = new ClientMsgProtobuf<CMsgClientAuthList>(EMsg.ClientAuthList);
-            authList.Body.tokens_left = (uint) _gcTokens.Count;
+            authList.Body.tokens_left = (uint)_gcTokens.Count;
             authList.Body.app_ids.AddRange(_gameTickets.Keys);
             authList.Body.tickets.AddRange(_gameTickets.Values.SelectMany(x => x));
             authList.SourceJobID = Client.GetNextJobID();
@@ -218,7 +211,7 @@ namespace DBD_API.Services
         // events
         private void OnGcTokens(SteamApps.GameConnectTokensCallback obj)
         {
-            foreach(var token in obj.Tokens) _gcTokens.Enqueue(token);
+            foreach (var token in obj.Tokens) _gcTokens.Enqueue(token);
             while (_gcTokens.Count > obj.TokensToKeep) _gcTokens.TryDequeue(out _);
             _gcTokensComplete.TrySetResult(true);
         }
@@ -276,7 +269,7 @@ namespace DBD_API.Services
 
             byte[] sentryHash = null;
             if (File.Exists("sentry.bin"))
-                sentryHash = CryptoHelper.SHAHash( 
+                sentryHash = CryptoHelper.SHAHash(
                     File.ReadAllBytes("sentry.bin")
                 );
 
@@ -301,6 +294,18 @@ namespace DBD_API.Services
                 Client.Connect();
             else
                 KeepAlive = false;
+        }
+
+
+        private void OnLicenseList(SteamApps.LicenseListCallback obj)
+        {
+            if (obj.Result != EResult.OK) return;
+
+            Licenses.Clear();
+            Licenses.AddRange(obj.LicenseList);
+
+            if(!LicenseCompletionSource.Task.IsCompleted)
+                LicenseCompletionSource.TrySetResult(true);
         }
 
     }

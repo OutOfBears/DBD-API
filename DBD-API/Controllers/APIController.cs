@@ -5,12 +5,12 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
-using System.Text.RegularExpressions;
+    using System.Text.Json;
+    using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DBD_API.Modules.DbD;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SmartFormat;
@@ -71,6 +71,26 @@ namespace DBD_API.Controllers
             { "timesHitNearHook", "DBD_HitNearHook" }
         };
 
+        private static readonly Dictionary<string, string> _correctPerkNames = new Dictionary<string, string>()
+        {
+            { "InTheDark", "Knock Out" },
+            { "SelfSufficient", "Unbreakable" },
+            { "FranklinsLoss", "Franklin's Demise" },
+            { "BBQAndChilli", "Barbecue & Chilli" },
+            { "Madgrit", "Mad Grit" },
+            { "GeneratorOvercharge", "Overcharge" },
+            { "TheMettleOfMan", "Mettle Of Man" },
+            { "pop_goes_the_weasel", "Pop Goes The Weasel" },
+            { "MonitorAndAbuse", "Monitor & Abuse" },
+            { "No_One_Escapes_Death", "Hex: No One Escapes Death" },
+            { "HangmansTrick", "Hangman's Trick" },
+            { "ImAllEars", "I'm All Ears" },
+            { "NurseCalling", "A Nurse's Calling" },
+            { "WellMakeIt", "We'll Make It" },
+            { "WakeUp", "Wake Up!" },
+            { "Plunderers_Instinct", "Plunderer's Instinct" }
+        };
+
         public APIController(
             DdbService dbdService,
             SteamService steamService
@@ -92,28 +112,8 @@ namespace DBD_API.Controllers
 
         private static string CorrectPerkName(string name)
         {
-            var weirdNames = new Dictionary<string, string>
-            {
-                { "InTheDark", "Knock Out" },
-                { "SelfSufficient", "Unbreakable" },
-                { "FranklinsLoss", "Franklin's Demise" },
-                { "BBQAndChilli", "Barbecue & Chilli" },
-                { "Madgrit", "Mad Grit" },
-                { "GeneratorOvercharge", "Overcharge" },
-                { "TheMettleOfMan", "Mettle Of Man" },
-                { "pop_goes_the_weasel", "Pop Goes The Weasel" },
-                { "MonitorAndAbuse", "Monitor & Abuse" },
-                { "No_One_Escapes_Death", "Hex: No One Escapes Death" },
-                { "HangmansTrick", "Hangman's Trick" },
-                { "ImAllEars", "I'm All Ears" },
-                { "NurseCalling", "A Nurse's Calling" },
-                { "WellMakeIt", "We'll Make It" },
-                { "WakeUp", "Wake Up!" },
-                { "Plunderers_Instinct", "Plunderer's Instinct" }
-            };
-
-            if (weirdNames.ContainsKey(name))
-                return weirdNames[name];
+            if (_correctPerkNames.ContainsKey(name))
+                return _correctPerkNames[name];
 
             var pattern = new Regex("([A-Za-z]([a-z0-9:]+))");
             var matches = pattern.Matches(name)
@@ -128,14 +128,14 @@ namespace DBD_API.Controllers
             else
                 matches.Add(name);
 
-            return matches.Join(" ");
+            return string.Join(" ", matches);
         }
 
 
         // API content
         public ActionResult Index()
         {
-            var allowedPrefixes = DdbService.AllowedPrefixes.Join(", ");
+            var allowedPrefixes = string.Join(" ", DdbService.AllowedPrefixes);
 
             return Json(new
             {
@@ -159,7 +159,7 @@ namespace DBD_API.Controllers
                 },
                 ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
 
-            }, new JsonSerializerSettings() { Formatting = Formatting.Indented });
+            }, new JsonSerializerOptions() { WriteIndented = true });
         }
 
         public async Task<ActionResult> Stats(ulong id = 0)
@@ -266,7 +266,7 @@ namespace DBD_API.Controllers
             }
             else
             {
-                return Json(shrine, new JsonSerializerSettings() { Formatting = Formatting.Indented });
+                return Json(shrine, new JsonSerializerOptions() { WriteIndented = true });
             }
         }
 
@@ -274,7 +274,7 @@ namespace DBD_API.Controllers
         {
             try
             {
-                return Json(await _dbdService.GetStoreOutfits(branch), new JsonSerializerSettings() { Formatting = Formatting.Indented });
+                return Json(await _dbdService.GetStoreOutfits(branch), new JsonSerializerOptions() { WriteIndented = true });
             }
             catch
             {
@@ -283,7 +283,7 @@ namespace DBD_API.Controllers
         }
 
         public async Task<ActionResult> Config(string branch = "live") =>
-             Content(await _dbdService.GetApiConfig(branch));
+             Content(await _dbdService.GetApiConfig(branch), "application/json");
 
         // CDN content
         public async Task<ActionResult> Catalog(string branch = "live")

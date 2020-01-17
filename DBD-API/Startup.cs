@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using DBD_API.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace DBD_API
 {
@@ -35,24 +36,29 @@ namespace DBD_API
         public void ConfigureServices(IServiceCollection services)
         {
             // services
-            services.AddSingleton<SteamService>();
             services.AddSingleton<DdbService>();
+            services.AddSingleton<SteamService>();
             services.AddHostedService<SteamEventService>();
+            services.AddHostedService<SteamDepotService>();
 
             // mvc
-            services.AddMvc();
+            services.AddControllers();
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseMvc(routes =>
+            app.UseHttpsRedirection();
+
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
             {
-                routes.MapRoute("default", "{controller=API}/{action=Index}/{id?}");
+                endpoints.MapControllers();
+                endpoints.MapControllerRoute("default", "{controller=API}/{action=Index}/{id?}");
             });
         }
     }
