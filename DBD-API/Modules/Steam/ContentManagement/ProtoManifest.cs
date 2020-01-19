@@ -39,7 +39,7 @@ namespace DBD_API.Modules.Steam.ContentManagement
             public FileData(DepotManifest.FileData sourceData) : this()
             {
                 FileName = sourceData.FileName;
-                sourceData.Chunks.ForEach(c => Chunks.Add(new ChunkData(c)));
+                sourceData.Chunks.ForEach(c => Chunks.Add(ChunkData.Create(c)));
                 Flags = sourceData.Flags;
                 TotalSize = sourceData.TotalSize;
                 FileHash = sourceData.FileHash;
@@ -73,16 +73,19 @@ namespace DBD_API.Modules.Steam.ContentManagement
             public byte[] FileHash { get; private set; }
         }
 
-        [ProtoContract(SkipConstructor = true)]
+        [ProtoContract()]
         public class ChunkData
         {
-            public ChunkData(DepotManifest.ChunkData sourceChunk)
+            public static ChunkData Create(DepotManifest.ChunkData sourceChunk)
             {
-                ChunkID = sourceChunk.ChunkID;
-                Checksum = sourceChunk.Checksum;
-                Offset = sourceChunk.Offset;
-                CompressedLength = sourceChunk.CompressedLength;
-                UncompressedLength = sourceChunk.UncompressedLength;
+                return new ChunkData
+                {
+                    ChunkID = sourceChunk.ChunkID,
+                    Checksum = sourceChunk.Checksum,
+                    Offset = sourceChunk.Offset,
+                    CompressedLength = sourceChunk.CompressedLength,
+                    UncompressedLength = sourceChunk.UncompressedLength
+                };
             }
 
             /// <summary>

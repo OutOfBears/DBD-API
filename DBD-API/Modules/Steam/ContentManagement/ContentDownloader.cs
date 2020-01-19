@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SteamKit2.Unified.Internal;
 
 using LicenseList = System.Collections.Generic.List<SteamKit2.SteamApps.LicenseListCallback.License>;
@@ -58,7 +59,6 @@ namespace DBD_API.Modules.Steam.ContentManagement
         private ConcurrentDictionary<uint, byte[]> _depotKeys;
 
         private CDNClientPool _cdnClientPool;
-        public readonly LicenseList _licenses;
 
         private readonly SteamClient _client;
         private readonly SteamApps _apps;
@@ -67,12 +67,16 @@ namespace DBD_API.Modules.Steam.ContentManagement
         private readonly string _stagingDir;
         private readonly string _dataDir;
 
+        private readonly ILogger _logger;
+        private readonly LicenseList Licenses;
 
-        public ContentDownloader(SteamClient client, CDNClientPool cdnClientPool, LicenseList licenses)
+        public ContentDownloader(SteamClient client, CDNClientPool cdnClientPool, LicenseList licenses, ILogger logger)
         {
-            _licenses = licenses;
+            Licenses = licenses;
+
             _cdnClientPool = cdnClientPool;
             _client = client;
+            _logger = logger;
 
             _apps = client.GetHandler<SteamApps>();
 
@@ -88,18 +92,18 @@ namespace DBD_API.Modules.Steam.ContentManagement
             _dataDir = Path.Combine(currentDir, "data");
 
             if (!Directory.Exists(_stagingDir)) Directory.CreateDirectory(_stagingDir);
-            if (!Directory.Exists(_cacheDir)) Directory.CreateDirectory(_stagingDir);
+            if (!Directory.Exists(_cacheDir)) Directory.CreateDirectory(_cacheDir);
             if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
         }
 
         public async Task<bool> AccountOwns(uint depotId)
         {
-            if (_licenses == null && _client.SteamID.AccountType != EAccountType.AnonUser)
+            if (Licenses == null && _client.SteamID.AccountType != EAccountType.AnonUser)
                 return false;
 
             IEnumerable<uint> licenseQuery = _client.SteamID.AccountType == EAccountType.AnonUser ?
                 new List<uint>() { 17906 } :
-                _licenses?.Select(x => x.PackageID);
+                Licenses?.Select(x => x.PackageID);
 
             if (!await GetPackageInfo(licenseQuery))
                 return false;
@@ -163,7 +167,7 @@ namespace DBD_API.Modules.Steam.ContentManagement
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Exception {0}", ex);
+                    _logger.LogWarning("Failed to get depot {0}: {1}", depot, ex.Message);
                 }
             }
 
@@ -274,7 +278,7 @@ namespace DBD_API.Modules.Steam.ContentManagement
                         info = app;
                     _appInfo[app.ID] = app;
                 }
-            
+
             if (info == null)
                 throw new Exception("Steam didnt return product info for app");
 
@@ -458,6 +462,7 @@ namespace DBD_API.Modules.Steam.ContentManagement
                 return Tuple.Create(false, "");
 
             var match = regex.Match(filePath);
+
             var newFilePath = match.Groups.Count > 1 ?
                 Path.Combine(match.Groups.Values.Where((x, y) => y > 0).Select(x => x.Value).ToArray()) :
                 match.Groups[0].Value;
@@ -467,14 +472,12 @@ namespace DBD_API.Modules.Steam.ContentManagement
 
         private async Task DownloadDepotsAsync(uint appId, string branch, List<DepotDownloadInfo> depots, List<Regex> fileRegexes, CancellationToken cannToken)
         {
-            branch = branch.ToLower();
-
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cannToken);
             var token = cts.Token;
 
             foreach (var depot in depots)
             {
-                Console.WriteLine("Downloading depot {0} '{1}'", depot.id, depot.contentName);
+                _logger.LogInformation("Downloading from depot {0} '{1}'", depot.id, depot.contentName);
 
                 ProtoManifest manifest = null;
                 var cachedManifest = ReadManifest(depot.id);
@@ -489,14 +492,13 @@ namespace DBD_API.Modules.Steam.ContentManagement
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("Failed to load cached manifest: {0}", ex);
+                        _logger.LogWarning("Failed to load cached manifest: {0}", ex.Message);
                         manifest = null;
                     }
                 }
-
                 if (manifest == null)
                 {
-                    Console.WriteLine("Downloading manifest for depot '{0}'", depot.id);
+                    _logger.LogInformation("Downloading manifest for depot '{0}'", depot.id);
                     DepotManifest depotManifest = null;
 
                     while (depotManifest == null)
@@ -519,25 +521,25 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                 var response = e.Response as HttpWebResponse;
                                 if (response?.StatusCode == HttpStatusCode.Unauthorized || response?.StatusCode == HttpStatusCode.Forbidden)
                                 {
-                                    Console.WriteLine("Encountered 401 for depot manifest {0} {1}. Aborting.", depot.id, depot.manifestId);
+                                    _logger.LogError("Encountered 401 for depot manifest {0} {1}. Aborting.", depot.id, depot.manifestId);
                                     break;
                                 }
                                 else
-                                    Console.WriteLine("Encountered error downloading depot manifest {0} {1}: {2}", depot.id, depot.manifestId, response?.StatusCode);
+                                    _logger.LogError("Encountered error downloading depot manifest {0} {1}: {2}", depot.id, depot.manifestId, response?.StatusCode);
                             }
                             else
-                                Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, depot.manifestId, e.Status);
+                                _logger.LogError("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, depot.manifestId, e.Status);
                         }
                         catch (Exception e)
                         {
                             _cdnClientPool.ReturnBrokenConnection(client);
-                            Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, depot.manifestId, e.Message);
+                            _logger.LogError("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, depot.manifestId, e.Message);
                         }
                     }
 
                     if (depotManifest == null)
                     {
-                        Console.WriteLine("\nUnable to download manifest {0} for depot {1}", depot.manifestId, depot.id);
+                        _logger.LogWarning("Unable to download manifest {0} for depot {1}", depot.manifestId, depot.id);
                         return;
                     }
 
@@ -572,13 +574,13 @@ namespace DBD_API.Modules.Steam.ContentManagement
                     if (!regexTest)
                         continue;
 
-                    Directory.CreateDirectory(Path.Combine(_dataDir, branch, Path.GetDirectoryName(filePath)));
-
                     var fileHash = EncodeHexString(file.FileHash);
                     var stagingPath = Path.Combine(stagingDir, fileHash, Path.GetFileName(filePath));
-                    var finalPath = Path.Combine(_dataDir, branch, filePath);
+                    var finalPath = Path.Combine(_dataDir, appId.ToString(), branch, filePath);
 
                     completeDownloadSize += file.TotalSize;
+
+                    Directory.CreateDirectory(Path.Combine(_dataDir, appId.ToString(), branch, Path.GetDirectoryName(filePath)));
 
 
                     var task = Task.Run(async () =>
@@ -664,7 +666,7 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                 if (neededChunks.Count == 0)
                                 {
                                     sizeDownloaded += file.TotalSize;
-                                    Console.WriteLine("{0,6:#00.00}% {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
+                                    _logger.LogInformation("File already downloaded: {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
                                     fs?.Dispose();
                                     return;
                                 }
@@ -719,26 +721,26 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                             var response = e.Response as HttpWebResponse;
                                             if (response?.StatusCode == HttpStatusCode.Unauthorized || response?.StatusCode == HttpStatusCode.Forbidden)
                                             {
-                                                Console.WriteLine("Encountered 401 for chunk {0}. Aborting.", chunkId);
+                                                _logger.LogError("Encountered 401 for chunk {0}. Aborting.", chunkId);
                                                 cts.Cancel();
                                                 break;
                                             }
                                             else
-                                                Console.WriteLine("Encountered error downloading chunk {0}: {1}", chunkId, response?.StatusCode);
+                                                _logger.LogError("Encountered error downloading chunk {0}: {1}", chunkId, response?.StatusCode);
                                         }
                                         else
-                                            Console.WriteLine("Encountered error downloading chunk {0}: {1}", chunkId, e.Status);
+                                            _logger.LogError("Encountered error downloading chunk {0}: {1}", chunkId, e.Status);
                                     }
                                     catch (Exception e)
                                     {
                                         _cdnClientPool.ReturnBrokenConnection(client);
-                                        Console.WriteLine("Encountered unexpected error downloading chunk {0}: {1}", chunkId, e.Message);
+                                        _logger.LogError("Encountered unexpected error downloading chunk {0}: {1}", chunkId, e.Message);
                                     }
                                 }
 
                                 if (chunkData == null)
                                 {
-                                    Console.WriteLine("Failed to find any server with chunk {0} for depot {1}. Aborting.", chunkId, depot.id);
+                                    _logger.LogWarning("Failed to find any server with chunk {0} for depot {1}. Aborting.", chunkId, depot.id);
                                     cts.Cancel();
                                 }
 
@@ -747,10 +749,11 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                 fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
                                 fs.Write(chunkData.Data, 0, chunkData.Data.Length);
                                 sizeDownloaded += chunk.UncompressedLength;
+                                _logger.LogInformation("{0,6:#00.00}% {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
+
                             }
 
                             fs?.Dispose();
-                            Console.WriteLine("{0,6:#00.00}% {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
                         }
                         finally
                         {
@@ -767,7 +770,9 @@ namespace DBD_API.Modules.Steam.ContentManagement
                     Directory.Delete(stagingDir, true);
 
                 if (completeDownloadSize > 0)
-                    Console.WriteLine("Depot {0} - Downloaded {1} bytes", depot.id, completeDownloadSize);
+                    _logger.LogInformation("Depot {0} - Downloaded {1} bytes", depot.id, completeDownloadSize);
+                else
+                    _logger.LogInformation("Finished downloading all depots");
 
             }
         }

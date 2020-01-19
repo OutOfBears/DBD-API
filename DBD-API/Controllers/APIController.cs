@@ -100,7 +100,6 @@ namespace DBD_API.Controllers
             _steamService = steamService;
         }
 
-
         private static int PipsToRank(uint rank)
         {
             for(var i = 2; i < _rankSet.Length; i += 3)
@@ -131,6 +130,17 @@ namespace DBD_API.Controllers
             return string.Join(" ", matches);
         }
 
+        private static string BranchToDepotBranch(string branch)
+        {
+            switch (branch)
+            {
+                case "live":
+                    return "Public";
+
+                default:
+                    return "";
+            }
+        }
 
         // API content
         public ActionResult Index()
@@ -144,6 +154,13 @@ namespace DBD_API.Controllers
                 contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
                 usage = new
                 {
+                    perks = "GET /api/perks(?branch=live)",
+                    offerings = "GET /api/offerings(?branch=live)",
+                    characters = "GET /api/characters(?branch=live)",
+                    tunables = "GET /api/tunables(?branch=live&killer=)",
+                    customizationitems = "GET /api/customizationitems(?branch=live)",
+                    itemaddons = "GET /api/itemaddons(?branch=live)",
+                    items = "GET /api/items(?branch=live)",
                     stats = "GET /api/stats/:steam_64: (Profile needs to be public)",
                     shrine = "GET /api/shrineofsecrets(?pretty=true&branch=live)",
                     store = "GET /api/storeoutfits(?branch=live)",
@@ -157,9 +174,111 @@ namespace DBD_API.Controllers
                     archive = "GET /api/archive(?branch=ptb&tome=Tome01)",
                     achiveRewardData = "GET /api/archiverewarddata(?branch=live)"
                 },
-                ps = $"only the whitelisted branches are allowed ({allowedPrefixes})"
+                ps = $"only the whitelisted branches are allowed ({allowedPrefixes}). Also pls dont spam any endpoints, I dont wanna have to add rate limitng..."
 
             }, new JsonSerializerOptions() { WriteIndented = true });
+        }
+
+        public ActionResult Items(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.ItemInfos.Count < 1 || _dbdService.ItemInfos[depotBranch].Count < 1)
+                return Unauthorized($"Items for branch '{branch}' not yet loaded");
+
+            return Json(_dbdService.ItemInfos[depotBranch], new JsonSerializerOptions() { IgnoreNullValues = true });
+        }
+
+        public ActionResult ItemAddons(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.ItemAddonInfos.Count < 1 || _dbdService.ItemAddonInfos[depotBranch].Count < 1)
+                return Unauthorized($"Items for branch '{branch}' not yet loaded");
+
+            return Json(_dbdService.ItemAddonInfos[depotBranch], new JsonSerializerOptions() { IgnoreNullValues = true });
+        }
+
+        public ActionResult Characters(string branch = "live", string type = "all")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.CharacterInfos.Count < 1 || _dbdService.CharacterInfos[depotBranch].Count < 1)
+                return Unauthorized($"Characters for branch '{branch}' not yet loaded");
+
+            var infos = _dbdService.CharacterInfos[depotBranch];
+            switch (type)
+            {
+                case "survivor":
+                    return Json(infos.Where(x => x.Value.Role == "EPlayerRole::VE_Camper")
+                        .ToDictionary(x => x.Key, x => x.Value));
+
+                case "killer":
+                    return Json(infos.Where(x => x.Value.Role == "EPlayerRole::VE_Slasher")
+                        .ToDictionary(x => x.Key, x => x.Value));
+
+                default:
+                    break;
+            }
+
+            return Json(infos);
+
+        }
+
+        public ActionResult Tunables(string branch = "live", string killerId = "")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.TunableInfos.Count < 1 || _dbdService.TunableInfos[depotBranch].Count < 1)
+                return Unauthorized($"Tunables for branch '{branch}' not yet loaded");
+
+            return string.IsNullOrWhiteSpace(killerId) ?
+                Json(_dbdService.TunableInfos[depotBranch]) : 
+                Json(_dbdService.TunableInfos[depotBranch][killerId]);
+        }
+
+        public ActionResult Perks(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.PerkInfos.Count < 1 || _dbdService.PerkInfos[depotBranch].Count < 1)
+                return Unauthorized($"Perks for branch '{branch}' not yet loaded");
+
+            return Json(_dbdService.PerkInfos[depotBranch]);
+        }
+
+        public ActionResult Offerings(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.OfferingInfos.Count < 1 || _dbdService.OfferingInfos[depotBranch].Count < 1)
+                return Unauthorized($"Offerings for branch '{branch}' not yet loaded");
+            
+            return Json(_dbdService.OfferingInfos[depotBranch]);
+        }
+
+        public ActionResult CustomizationItems(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.CustomItemInfos.Count < 1 || _dbdService.CustomItemInfos[depotBranch].Count < 1)
+                return Unauthorized($"Customizations items for branch '{branch}' not yet loaded");
+
+            return Json(_dbdService.CustomItemInfos[depotBranch]);
         }
 
         public async Task<ActionResult> Stats(ulong id = 0)
@@ -200,7 +319,7 @@ namespace DBD_API.Controllers
 
         public async Task<ActionResult> ShrineOfSecrets(string branch = "live")
         {
-            ShrineResponse shrine = null;
+            ShrineResponse shrine;
 
             try
             {
@@ -212,9 +331,15 @@ namespace DBD_API.Controllers
             {
                 return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
             }
-            
+
+            var useRealFix = _dbdService.PerkInfos.TryGetValue(BranchToDepotBranch(branch),
+                out var perkInfos);
+
             foreach (var item in shrine.Items)
-                item.Name = CorrectPerkName(item.Id);
+                if (useRealFix && perkInfos.TryGetValue(item.Id, out var perk))
+                    item.Name = perk.DisplayName;
+                else
+                    item.Name = CorrectPerkName(item.Id);
 
             var format = (string) Request.Query["format"];
             if (!string.IsNullOrEmpty(Request.Query["pretty"]))

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -9,19 +10,23 @@ using System.Threading.Tasks;
 
 using RestSharp;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using DBD_API.Modules.DbD;
+using DBD_API.Modules.DbD.Items;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SteamKit2;
+using SteamKit2.GC.Dota.Internal;
 
 namespace DBD_API.Services
 {
     public class DdbService
     {
         // static
+
         public static readonly string[] AllowedPrefixes =
         {
             "live",
@@ -31,6 +36,15 @@ namespace DBD_API.Services
             "qa",
             "cert"
         };
+
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, PerkInfo>> PerkInfos;
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, OfferingInfo>> OfferingInfos;
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, CustomItemInfo>> CustomItemInfos;
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, CharacterInfo>> CharacterInfos;
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, ItemAddonInfo>> ItemAddonInfos;
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, BaseItem>> ItemInfos;
+
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, TunableInfo>> TunableInfos;
 
         private readonly IConfiguration _config;
 
@@ -51,6 +65,16 @@ namespace DBD_API.Services
             
             _restClients = new Dictionary<string, RestClient>();
             _restCdnClients = new Dictionary<string, RestClient>();
+
+            // cached item info
+            PerkInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, PerkInfo>>();
+            OfferingInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, OfferingInfo>>();
+            CustomItemInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, CustomItemInfo>>();
+            CharacterInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, CharacterInfo>>();
+            ItemAddonInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, ItemAddonInfo>>();
+            ItemInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, BaseItem>>();
+            TunableInfos = new ConcurrentDictionary<string, ConcurrentDictionary<string, TunableInfo>>();
+
 
             foreach (var api in AllowedPrefixes)
             {

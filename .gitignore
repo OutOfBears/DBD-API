@@ -4,3 +4,5 @@ sentry.bin
 bin/
 PublishProfiles/
 obj/
+DBD-API/manifest_cache/
+DBD-API/data/

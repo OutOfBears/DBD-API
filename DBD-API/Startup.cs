@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using DBD_API.Modules.DbD.Items;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -35,6 +36,9 @@ namespace DBD_API
 
         public void ConfigureServices(IServiceCollection services)
         {
+            // logging
+            services.AddLogging();
+            
             // services
             services.AddSingleton<DdbService>();
             services.AddSingleton<SteamService>();
@@ -42,7 +46,8 @@ namespace DBD_API
             services.AddHostedService<SteamDepotService>();
 
             // mvc
-            services.AddControllers();
+            services.AddControllers()
+                .AddJsonOptions(x => x.JsonSerializerOptions.Converters.Add(new TunableSerializer()));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

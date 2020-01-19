@@ -15,9 +15,17 @@
 
   <ItemGroup>
     <Compile Remove="a\**" />
+    <Compile Remove="data\**" />
+    <Compile Remove="manifest_cache\**" />
     <Content Remove="a\**" />
+    <Content Remove="data\**" />
+    <Content Remove="manifest_cache\**" />
     <EmbeddedResource Remove="a\**" />
+    <EmbeddedResource Remove="data\**" />
+    <EmbeddedResource Remove="manifest_cache\**" />
     <None Remove="a\**" />
+    <None Remove="data\**" />
+    <None Remove="manifest_cache\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +40,14 @@
     <PackageReference Include="SmartFormat.NET" Version="2.5.0" />
     <PackageReference Include="SteamKit2" Version="2.2.0" />
     <PackageReference Include="zlib.net" Version="1.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Assets\UnrealTools.Assets.csproj" />
+    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Core\UnrealTools.Core.csproj" />
+    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Objects\UnrealTools.Objects.csproj" />
+    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Pak\UnrealTools.Pak.csproj" />
+    <ProjectReference Include="..\UnrealTools\src\UnrealTools.TypeFactory\UnrealTools.TypeFactory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
