@@ -11,7 +11,7 @@ Currently I use it to retreive and display the shrine of secrets and output when
 It logins in anonymously to the Dead By Daylight API, and retrieves information from endpoints from the api and returns them, additionally it does the same from Dead By Daylight's CDN. It also reads from the PAK file (which is what requires the steam user to download the files), to get information such as perks, offerings, characters, tunables, items, etc...
 
 ## Where is it hosted?
-you can find it [here](https://dbd.wolfer.io)
+you can find it [here](https://dbd-stats.net)
 
 ## Endpoints
 1.  /api/perks(?branch=live)
