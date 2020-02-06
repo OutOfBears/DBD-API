@@ -50,6 +50,8 @@ namespace DBD_API.Modules.Steam.ContentManagement
 
     class ContentDownloader
     {
+        private const bool DEBUG = false;
+
         private const int MAX_DOWNLOADS = 8;
         private const uint INVALID_ID = uint.MaxValue;
         private const ulong INVALID_LONG_ID = ulong.MaxValue;
@@ -574,6 +576,8 @@ namespace DBD_API.Modules.Steam.ContentManagement
                     if (!regexTest)
                         continue;
 
+                    if(DEBUG) _logger.LogInformation("Queued file '{0}' for download", file.FileName);
+
                     var fileHash = EncodeHexString(file.FileHash);
                     var stagingPath = Path.Combine(stagingDir, fileHash, Path.GetFileName(filePath));
                     var finalPath = Path.Combine(_dataDir, appId.ToString(), branch, filePath);
@@ -666,7 +670,8 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                 if (neededChunks.Count == 0)
                                 {
                                     sizeDownloaded += file.TotalSize;
-                                    _logger.LogInformation("File already downloaded: {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
+                                    if(DEBUG)
+                                        _logger.LogInformation("File already downloaded: {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
                                     fs?.Dispose();
                                     return;
                                 }
@@ -749,7 +754,8 @@ namespace DBD_API.Modules.Steam.ContentManagement
                                 fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
                                 fs.Write(chunkData.Data, 0, chunkData.Data.Length);
                                 sizeDownloaded += chunk.UncompressedLength;
-                                _logger.LogInformation("{0,6:#00.00}% {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
+                                if(DEBUG)
+                                    _logger.LogInformation("{0,6:#00.00}% {1}", ((float)sizeDownloaded / (float)completeDownloadSize) * 100.0f, filePath);
 
                             }
 

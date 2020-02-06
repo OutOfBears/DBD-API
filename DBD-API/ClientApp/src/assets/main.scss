@@ -1,0 +1,248 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+div.container, div.content-container {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+div.content-container {
+  margin-top: 40px;
+
+  h1, h2, h3, h4 {
+    color: inherit;
+  }
+}
+
+div.ant-list-empty-text {
+  color: white;
+
+  & div.ant-empty-image > img {
+    color: black;
+  }
+}
+
+div.ant-select {
+  &.ant-select-disabled {
+    & > div.ant-select-selection {
+      color: rgba(255, 255, 255, .6);
+
+      &:hover {
+        border-color: rgba(0,0,0,.1) !important;
+      }
+    }
+  }
+
+  & > div.ant-select-selection {
+    background: rgba(0,0,0,.25);
+    border-color: rgba(0,0,0,.1);
+    color: white;
+
+    &:hover {
+      border-color: #1890ff;
+    }
+
+    & span.ant-select-arrow {
+      color: white;
+    }
+  }
+}
+
+div.ant-select-dropdown {
+  background: #212326;
+  color: rgba(255,255,255,.6);
+
+  & li.ant-select-dropdown-menu-item {
+    color: inherit;
+
+    &.ant-select-dropdown-menu-item-selected {
+      color: #fff;
+      background: rgba(255,255,255,.05);
+    }
+
+    &:hover {
+      background: rgba(255,255,255,.05);
+    }
+  }
+}
+
+.ant-alert-with-description, .ant-alert-message {
+  color: inherit !important;
+}
+
+.ant-alert-message {
+  font-weight: 600;
+}
+
+.ant-alert-description {
+  color: inherit;
+}
+
+.ant-alert-error {
+  background: rgba(255,0,0,0.3) !important;
+  border: 1px solid rgba(255,0,0,0.35) !important;
+  color: white !important;
+}
+
+div.news-item {
+  padding: 20px;
+  background: rgba(0,0,0,0.4);
+  color: white;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(0,0,0,0.2) !important;
+
+  & > div {
+    display: flex;
+    flex-direction: column;
+
+    & > div.image-container {
+      height: 118px;
+      margin: -20px -20px 20px -20px;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+      background: rgba(0,0,0,0.7);
+
+      & > img {
+        border-top-left-radius: 5px;
+        width: 40%;
+      }
+    }
+
+    & > span.title {
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 15px;
+      font-weight: 700;
+    }
+
+    & > span.body {
+      padding: 20px;
+
+      & li:not(:last-child) {
+        list-style: disc;
+        margin-left: 15px;
+      }
+    }
+  }
+}
+
+span.perk-formatted {
+  color: white;
+  font-weight: 600;
+}
+span.perk-level-0 {
+  color: #199b1e;
+}
+span.perk-level-1 {
+  color: #ac3ee3
+}
+span.perk-level-2 {
+  color: #ff0955;
+}
+
+div.characters-container {
+  div.ant-row > div {
+    width: max-content !important;
+  }
+}
+
+div.character-info {
+  & div.specificInfo {
+    div.ant-tabs-bar {
+      border-color: rgba(255,255,255,0.05);
+    }
+
+    div.ant-tabs-tab-disabled {
+      color: rgba(255,255,255,0.25);
+    }
+  }
+
+  div.desc {
+    & li {
+      list-style: disc;
+      margin-left: 15px;
+    }
+  }
+}
+
+div.tunable-container > div.ant-table-wrapper {
+  & div.ant-table-content {
+    background: rgba(0,0,0,0.2);
+  }
+
+  & div.ant-table {
+    color: rgba(255,255,255,0.8);
+  }
+
+  & .ant-table-thead > tr > th {
+    color: white;
+    background: rgba(0,0,0,0.2);
+    border-bottom-color: rgba(255,255,255,0.1);
+  }
+
+  & .ant-table-tbody > tr > td {
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  & tr.ant-table-row {
+    &:hover > td {
+      background: rgba(255,255,255,0.1) !important;
+    }
+  }
+
+  & ul.ant-pagination {
+    margin-top: 8px;
+
+    & .ant-pagination-item-link, & .ant-pagination-item {
+      background: rgba(0, 0, 0, 0.2);
+
+      &:hover {
+        color: #1890ff;
+        border-color: #1890ff;
+      }
+
+      &:not(.ant-pagination-item-active) > a, &:not(.ant-pagination-item-active) {
+        color: white;
+      }
+
+      &:not(.ant-pagination-item-active) {
+        border-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}
+
+div.perk-list-container, div.offering-list-container {
+  & .desc {
+    li {
+      list-style: disc;
+      margin-left: 15px;
+    }
+
+    /* TODO: Finish these */
+    span.Highlight1 {
+
+    }
+    span.Highlight2 {
+      //color: #ff8800;
+    }
+    span.Highlight2, span.Highlight3 {
+      //color: #d41c1c;
+      font-weight: 700;
+    }
+    span.Highlight4 {
+
+    }
+    span.FlavorText {
+      display: block;
+      font-style: italic;
+      color: #e3d1b6;
+    }
+  }
+}

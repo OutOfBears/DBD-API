@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,16 +10,49 @@ using UnrealTools.Core;
 using UnrealTools.Objects.Classes;
 using TaggedItem = System.Collections.Generic.KeyValuePair<string, UnrealTools.Objects.Classes.TaggedObject>;
 
-namespace DBD_API.Modules.DbD.Items
+namespace DBD_API.Modules.DbD.PakItems
 {
     using TaggedItemsList = System.Collections.Generic.List<TaggedItem>;
+    using TunableInfos = ConcurrentDictionary<string, TunableInfo>;
+
+    public class TunableContainer
+    {
+        [JsonPropertyName("baseTunables")]
+        public TunableInfos BaseTunables { get; private set; }
+
+        [JsonPropertyName("killerTunables")]
+        public TunableInfos KillerTunables { get; private set; }
+
+        [JsonPropertyName("knownTunableValues")]
+        public TunableInfos KnownTunableValues { get; private set; }
+
+        [JsonPropertyName("unknownTunableValues")]
+        public TunableInfos UnknownTunableValues { get; private set; }
+
+        public TunableContainer()
+        {
+            BaseTunables = new TunableInfos();
+            KillerTunables = new TunableInfos();
+            KnownTunableValues = new TunableInfos();
+            UnknownTunableValues = new TunableInfos();
+        }
+    }
 
     public class Tunable
     {
+        [JsonPropertyName("value")]
         public object Value { get; private set; }
+
+        [JsonPropertyName("atlantaOverridenValue")]
         public object AtlantaOverridenValue { get; private set; }
+
+        [JsonPropertyName("description")]
         public string Description { get; private set; }
+
+        [JsonPropertyName("descriptorTags")]
         public string DescriptorTags { get; private set; }
+
+        [JsonPropertyName("overridenInAtlanta")]
         public bool OverridenInAtlanta { get; private set; }
 
         public Tunable(object value, object atlantaValue, string description,

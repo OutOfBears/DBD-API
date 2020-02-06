@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using TaggedItem = System.Collections.Generic.KeyValuePair<string, UnrealTools.Objects.Interfaces.IProperty>;
 using Property = UnrealTools.Objects.Interfaces.IProperty;
 
-namespace DBD_API.Modules.DbD.Items
+namespace DBD_API.Modules.DbD.PakItems
 {
     using TaggedItemsList = System.Collections.Generic.List<TaggedItem>;
 

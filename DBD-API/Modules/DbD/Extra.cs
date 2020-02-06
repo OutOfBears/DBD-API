@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,18 +11,9 @@ using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
 namespace DBD_API.Modules.DbD
 {
-    public static class ArrayExt
+    public static class Encryption
     {
-        public static T[] Subset<T>(this T[] array, int start, int count)
-        {
-            T[] result = new T[count];
-            Array.Copy(array, start, result, 0, count);
-            return result;
-        }
-    }
 
-    public static class Extra
-    {
         public static byte[] ReadToEnd(System.IO.Stream stream)
         {
             long originalPosition = 0;
@@ -98,9 +90,7 @@ namespace DBD_API.Modules.DbD
             //return plaintext in String
             return Encoding.UTF8.GetString(plain, 0, decryptcount);
         }
-
-
-
+        
         public static string DecryptCdn(string content, string key)
         {
             content = content.Substring(8).Trim();

@@ -6,3 +6,5 @@ PublishProfiles/
 obj/
 DBD-API/manifest_cache/
 DBD-API/data/
+
+DBD-API.sln.DotSettings.user

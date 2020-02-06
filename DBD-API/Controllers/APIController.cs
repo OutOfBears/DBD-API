@@ -1,14 +1,16 @@
-﻿    using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Encodings.Web;
-    using System.Text.Json;
-    using System.Text.RegularExpressions;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DBD_API.Modules.DbD;
+using DBD_API.Modules.DbD.JsonResponse;
 using DBD_API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -24,40 +26,21 @@ namespace DBD_API.Controllers
         private DdbService _dbdService;
         private SteamService _steamService;
 
-        // thanks for the help tricky
         private static readonly uint[] _rankSet = {
-            // start, end, rank
-            0, 2, 20,	// rank 20
-            3, 5, 19,	// rank 19
-            6, 9, 18,	// rank 18
-            10, 13, 17,	// rank 17
-            14, 17, 16,	// rank 16
-            18, 21, 15,	// rank 15
-            22, 25, 14,	// rank 14
-            26, 29, 13,	// rank 13
-            30, 34, 12,	// rank 12
-            35, 39, 11,	// rank 11
-            40, 44, 10,	// rank 10
-            45, 49, 9,	// rank 9
-            50, 54, 8,	// rank 8
-            55, 59, 7,	// rank 7
-            60, 64, 6,	// rank 6
-            65, 69, 5,	// rank 5
-            70, 74, 4,	// rank 4
-            75, 79, 3,	// rank 3
-            80, 84, 2,	// rank 2
-            85, 89, 1,	// rank 1
+            85, 80, 75, 70, 65, 60, 55, 50,
+            45, 40, 35, 30, 26, 22, 18, 14,
+            10,  6,  3,  0
         };
 
         // the purpose of this is to make the output more readable
         private static readonly Dictionary<string, string> _statsProxy = new Dictionary<string, string>()
         {
             { "survivorsMorid", "DBD_KilledCampers" },
-            { "survivorsSacrified", "DBD_SacrificedCampers" },
+            { "survivorsSacrificed", "DBD_SacrificedCampers" },
             { "escapes", "DBD_Escape" },
             { "escapesKO", "DBD_EscapeKO" },
             { "escapesWithItem", "DBD_CamperNewItem" },
-            { "escapesWithChestItem", "DBD_CamperEscapeWithItemFrom" },
+            { "escapesWithItemFromDeadPlayer", "DBD_CamperEscapeWithItemFrom" },
             { "escapesWithNoDamageObsession", "DBD_EscapeNoBlood_Obsession" },
             { "chainsawHits", "DBD_ChainsawHit" },
             { "skillCheckSuccesses", "DBD_SkillCheckSuccess" },
@@ -66,9 +49,64 @@ namespace DBD_API.Controllers
             { "ultraRareOfferingsBurned", "DBD_BurnOffering_UltraRare" },
             { "hitsNearHook", "DBD_HitNearHook" },
             { "totalBpSpent", "DBD_BloodwebPoints" },
-            { "allSurvivorsEscapedThruHatch", "DBD_AllEscapeThroughHatch" },
+            { "allSurvivorsEscapedThruHatch", "DBD_AllEscapeThroughHatch" }, 
             { "trapsPickedUp", "DBD_TrapPickup" },
-            { "timesHitNearHook", "DBD_HitNearHook" }
+            { "killerPerfectMatches", "DBD_SlasherMaxScoreByCategory" },
+            { "survivorPerfectMatches", "DBD_CamperMaxScoreByCategory" },
+            { "survivorsHitWhileCarrying", "DBD_Chapter10_Slasher_Stat1" },
+            { "survivorsCaughtDoingGen", "DBD_Chapter12_Slasher_Stat1" },
+            { "obsessionsSacrificed", "DBD_Chapter12_Slasher_Stat1" },
+            { "survivorsKilledInEndGame", "DBD_DLC8_Slasher_Stat2" },
+            { "survivorsKilledBeforeEndGame", "DBD_Chapter11_Slasher_Stat1" },
+            { "hatchesClosed", "DBD_Chapter13_Slasher_Stat1" },
+            { "generatorsCompleted", "DBD_GeneratorPct_float" },
+            { "healingStatesCompleted",  "DBD_HealPct_float" },
+            { "survivorUnhookOrHeals", "DBD_UnhookOrHeal" },
+            { "usedUltraRareAndEscaped", "DBD_CamperKeepUltraRare" },
+            { "chestsOpened", "DBD_DLC7_Camper_Stat1" },
+            { "hexTotemsCleansed", "DBD_DLC3_Camper_Stat1" },
+            { "killerGraspsEscaped", "DBD_Chapter12_Camper_Stat1" },
+            { "selfSurvivorHookEscape", "DBD_Chapter9_Camper_Stat1" },
+            { "hooksSabotaged", "DBD_Chapter10_Camper_Stat1"},
+            { "myersTierUps", "DBD_SlasherTierIncrement " }, 
+            { "survivorsPutToSleep", "DBD_DLC7_Slasher_Stat1" },
+            { "mysteryBoxesOpened", "DBD_Event1_Stat3" },
+            { "survivorsPutIntoDeepWound", "DBD_Chapter10_Slasher_Stat2" },
+            { "healingStatesCompletedWhileInjured", "DBD_Chapter11_Camper_Stat1_float" },
+            { "survivorsMarkedWithGhostFace", "DBD_Chapter12_Slasher_Stat2" },
+            { "survivorsHookedWhileTeamInjured", "DBD_Chapter14_Slasher_Stat1" },
+            { "wentIntoMatchWithFullSurvivorLayout", "DBD_CamperFullLoadout" },
+            { "wentIntoMatchWithFullKillerLayout", "DBD_SlasherFullLoadout" },
+            { "gensKickedCompletelyRepaired", "DBD_Camper8_Stat1" },
+            { "survivorVaultsWhileChased", "DBD_Camper8_Stat2" },
+            { "exitGatesOpened", "DBD_DLC7_Camper_Stat2" },
+            { "bearTrapsPlacedAsPig", "DBD_DLC8_Slasher_Stat1" },
+            { "timesThreeSurvivorsHookedInBasement", "DBD_Event1_Stat1" },
+            { "gensKickedAfterSurvivorHook", "DBD_DLC9_Slasher_Stat1" },
+            { "survivorsHitWhoDroppedPalletInChase", "DBD_Chapter9_Slasher_Stat1" },
+            { "hagTrapsTriggered", "DBD_DLC3_Slasher_Stat1" },
+            { "survivorsShockedWithDoc", "DBD_DLC4_Slasher_Stat1" },
+            { "hatchetThrowsWithHuntress", "DBD_DLC5_Slasher_Stat1" },
+            { "bubbaChainsawHits", "DBD_DLC6_Slasher_Stat1" }, 
+            { "nurseBlinkAttacks", "DBD_SlasherChainAttack" },
+            { "hitsWithHatchets24MOrMore", "DBD_DLC5_Slasher_Stat2"},
+            { "survivorsPlagInfectedDowned", "DBD_Chapter11_Slasher_Stat2" },
+            { "survivorsHookedInBasement", "DBD_DLC6_Slasher_Stat2" },
+            { "survivorsDownedAfterPhaseWalk", "DBD_Chapter9_Slasher_Stat2" },
+            { "survivorsDownedWithShred", "DBD_Chapter13_Slasher_Stat2" },
+            { "survivorsDownedWhileInDemonFury", "DBD_Chapter14_Slasher_Stat2" },
+            { "survivorsDownedWhilePoisonedClown", "DBD_DLC9_Slasher_Stat2" },
+            { "secondFloorGenAndEscapedLampkinLane", "DBD_FixSecondFloorGenerator_MapSub_Street" },
+            { "secondFloorGenAndEscapedMothersDwelling", "DBD_FixSecondFloorGenerator_MapBrl_MaHouse" },
+            { "secondFloorGenAndEscapedFatherCampbells Chapel", "DBD_FixSecondFloorGenerator_MapAsy_Chapel" },
+            { "secondFloorGenAndEscapedDisturbedWard", "DBD_FixSecondFloorGenerator_MapAsy_Asylum" },
+            { "secondFloorGenAndEscapedYamaokaResidence", "DBD_FixSecondFloorGenerator_MapHti_Manor" },
+            { "secondFloorGenAndEscapedTempleOfPurgation", "DBD_FixSecondFloorGenerator_MapBrl_Temple" },
+            { "secondFloorGenAndEscapedHawkinsLab", "DBD_FixSecondFloorGenerator_MapQat_Lab" },
+            { "secondFloorGenAndEscapedSanctumOfWrath", "DBD_FixSecondFloorGenerator_MapHti_Shrine" },
+            { "secondFloorGenAndEscapedMountOrmond", "DBD_FixSecondFloorGenerator_MapKny_Cottage" },
+            { "secondFloorGenAndEscapedThePaleRose", "DBD_FixSecondFloorGenerator_MapSwp_PaleRose" },
+            { "secondFloorGenAndEscapedTheGame", "DBD_FixSecondFloorGenerator_MapFin_Hideout" },
         };
 
         private static readonly Dictionary<string, string> _correctPerkNames = new Dictionary<string, string>()
@@ -102,9 +140,9 @@ namespace DBD_API.Controllers
 
         private static int PipsToRank(uint rank)
         {
-            for(var i = 2; i < _rankSet.Length; i += 3)
-                if (rank >= _rankSet[i - 2] && rank <= _rankSet[i - 1])
-                    return (int)_rankSet[i];
+            for (var i = 0; i < _rankSet.Length; i++)
+                if (rank >= _rankSet[i])
+                    return i + 1;
 
             return -1;
         }
@@ -142,6 +180,11 @@ namespace DBD_API.Controllers
             }
         }
 
+        private JsonResult PrettyJson(object x)
+        {
+            return Json(x, new JsonSerializerOptions() { IgnoreNullValues = true });
+        }
+
         // API content
         public ActionResult Index()
         {
@@ -154,10 +197,14 @@ namespace DBD_API.Controllers
                 contact = "Nexure#0001 (Discord), Nexurez (Twitch)",
                 usage = new
                 {
+                    maps = "GET /api/maps(?branch=live)",
                     perks = "GET /api/perks(?branch=live)",
                     offerings = "GET /api/offerings(?branch=live)",
                     characters = "GET /api/characters(?branch=live)",
                     tunables = "GET /api/tunables(?branch=live&killer=)",
+                    emblemtunnables = "GET /api/emblemtunables(?branch=live)",
+                    gameconfigs = "GET /api/gameconfigs(?branch=live)",
+                    ranksthresholds = "GET /api/ranksthresholds(?branch=live)",
                     customizationitems = "GET /api/customizationitems(?branch=live)",
                     itemaddons = "GET /api/itemaddons(?branch=live)",
                     items = "GET /api/items(?branch=live)",
@@ -179,7 +226,19 @@ namespace DBD_API.Controllers
             }, new JsonSerializerOptions() { WriteIndented = true });
         }
 
-        public ActionResult Items(string branch = "live")
+        public ActionResult Maps(string branch = "live")
+        {
+            var depotBranch = BranchToDepotBranch(branch);
+            if (string.IsNullOrEmpty(depotBranch))
+                return BadRequest($"Branch '{branch}' not supported");
+
+            if (_dbdService.MapInfos.Count < 1 || _dbdService.MapInfos[depotBranch].Count < 1)
+                return Unauthorized($"Maps for branch '{branch}' not yet loaded");
+
+            return Json(_dbdService.MapInfos[depotBranch], new JsonSerializerOptions() { IgnoreNullValues = true });
+        }
+
+        public ActionResult Items(string branch = "live", string id = "")
         {
             var depotBranch = BranchToDepotBranch(branch);
             if (string.IsNullOrEmpty(depotBranch))
@@ -188,7 +247,10 @@ namespace DBD_API.Controllers
             if (_dbdService.ItemInfos.Count < 1 || _dbdService.ItemInfos[depotBranch].Count < 1)
                 return Unauthorized($"Items for branch '{branch}' not yet loaded");
 
-            return Json(_dbdService.ItemInfos[depotBranch], new JsonSerializerOptions() { IgnoreNullValues = true });
+
+            return string.IsNullOrEmpty(id) ?
+                PrettyJson(_dbdService.ItemInfos[depotBranch]) :
+                PrettyJson(_dbdService.ItemInfos[depotBranch][id]);
         }
 
         public ActionResult ItemAddons(string branch = "live")
@@ -203,7 +265,7 @@ namespace DBD_API.Controllers
             return Json(_dbdService.ItemAddonInfos[depotBranch], new JsonSerializerOptions() { IgnoreNullValues = true });
         }
 
-        public ActionResult Characters(string branch = "live", string type = "all")
+        public ActionResult Characters(string branch = "live", string type = "all", int id = -1)
         {
             var depotBranch = BranchToDepotBranch(branch);
             if (string.IsNullOrEmpty(depotBranch))
@@ -211,6 +273,9 @@ namespace DBD_API.Controllers
 
             if (_dbdService.CharacterInfos.Count < 1 || _dbdService.CharacterInfos[depotBranch].Count < 1)
                 return Unauthorized($"Characters for branch '{branch}' not yet loaded");
+
+            if (id > -1)
+                return Json(_dbdService.CharacterInfos[depotBranch].SearchOne(x => x.CharacterIndex == id));
 
             var infos = _dbdService.CharacterInfos[depotBranch];
             switch (type)
@@ -231,21 +296,19 @@ namespace DBD_API.Controllers
 
         }
 
-        public ActionResult Tunables(string branch = "live", string killerId = "")
+        public ActionResult Tunables(string branch = "live")
         {
             var depotBranch = BranchToDepotBranch(branch);
             if (string.IsNullOrEmpty(depotBranch))
                 return BadRequest($"Branch '{branch}' not supported");
 
-            if (_dbdService.TunableInfos.Count < 1 || _dbdService.TunableInfos[depotBranch].Count < 1)
+            if (_dbdService.TunableInfos.Count < 1 || !_dbdService.TunableInfos.TryGetValue(depotBranch, out var tunableContainer))
                 return Unauthorized($"Tunables for branch '{branch}' not yet loaded");
 
-            return string.IsNullOrWhiteSpace(killerId) ?
-                Json(_dbdService.TunableInfos[depotBranch]) : 
-                Json(_dbdService.TunableInfos[depotBranch][killerId]);
+            return Json(tunableContainer);
         }
 
-        public ActionResult Perks(string branch = "live")
+        public ActionResult Perks(string branch = "live", int id = -1)
         {
             var depotBranch = BranchToDepotBranch(branch);
             if (string.IsNullOrEmpty(depotBranch))
@@ -254,7 +317,9 @@ namespace DBD_API.Controllers
             if (_dbdService.PerkInfos.Count < 1 || _dbdService.PerkInfos[depotBranch].Count < 1)
                 return Unauthorized($"Perks for branch '{branch}' not yet loaded");
 
-            return Json(_dbdService.PerkInfos[depotBranch]);
+
+            return id > -1 ? Json(_dbdService.PerkInfos[depotBranch].SearchMany(x => x.AssociatedPlayerIndex == id)) 
+                : Json(_dbdService.PerkInfos[depotBranch]);
         }
 
         public ActionResult Offerings(string branch = "live")
@@ -286,9 +351,9 @@ namespace DBD_API.Controllers
             if (id == 0)
                 return BadRequest("Invalid data, please pass steamid64");
 
-            Dictionary<string, double> data = new Dictionary<string, double>();
+            Dictionary<string, object> data = new Dictionary<string, object>();
             var result = await _steamService.GetUserStats(381210, id);
-            if (result == null || result.Equals(default(Dictionary<string, double>)))
+            if (result == null || result.Equals(default(Dictionary<string, object>)))
                 return UnprocessableEntity("Unable to get player stats, maybe their profile isn't public");
 
             data["killerRank"] = result.ContainsKey("DBD_KillerSkulls") ?
@@ -391,7 +456,7 @@ namespace DBD_API.Controllers
             }
             else
             {
-                return Json(shrine, new JsonSerializerOptions() { WriteIndented = true });
+                return Json(shrine, ShrineConverter.Settings);
             }
         }
 
@@ -399,11 +464,15 @@ namespace DBD_API.Controllers
         {
             try
             {
-                return Json(await _dbdService.GetStoreOutfits(branch), new JsonSerializerOptions() { WriteIndented = true });
+                var outfits = await _dbdService.GetStoreOutfits(branch);
+                if (outfits == null)
+                    throw new Exception("Invalid response from dbd");
+
+                return Json(outfits, StoreConverter.Settings);
             }
             catch
             {
-                return Content("Uh oh, we failed to retrieve the shrine from dbd servers :/");
+                return Content("Uh oh, we failed to retrieve the sto from dbd servers :/");
             }
         }
 
@@ -431,6 +500,15 @@ namespace DBD_API.Controllers
 
         public async Task<ActionResult> ArchiveRewardData(string branch = "live")
             => Content(await _dbdService.GetCdnContent("/gameinfo/archiveRewardData/content.json", branch), "application/json");
+
+        public async Task<ActionResult> EmblemTunables(string branch = "live")
+            => Content(await _dbdService.GetCdnContentFormat("/content/{0}/emblemTunable.json", branch), "application/json");
+
+        public async Task<ActionResult> RanksThresholds(string branch = "live")
+            => Content(await _dbdService.GetCdnContentFormat("/content/{0}/ranksThresholds.json", branch), "application/json");
+
+        public async Task<ActionResult> GameConfigs(string branch = "live")
+            => Content(await _dbdService.GetCdnContentFormat("/content/{0}/GameConfigs.json", branch), "application/json");
 
         public async Task<ActionResult> Archive(string branch = "live", string tome = "Tome01")
         {

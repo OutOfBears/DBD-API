@@ -126,16 +126,16 @@ namespace DBD_API.Services
             //return response.AchievementBlocks;
         }
 
-        public async Task<Dictionary<string, double>> GetUserStats(GameID gameId, SteamID steamId)
+        public async Task<Dictionary<string, object>> GetUserStats(GameID gameId, SteamID steamId)
         {
             var response = await RequestUserStats(gameId, steamId);
             if (response.Result != EResult.OK || response.Schema == null)
                 return null;
 
-            var results = new Dictionary<string, double>();
+            var results = new Dictionary<string, object>();
             var schema = response.ParsedSchema;
             var stats = schema.Children.FirstOrDefault(x => x.Name == "stats");
-            if (stats.Equals(default(Dictionary<string, double>)))
+            if (stats == null || stats.Equals(default(Dictionary<string, double>)))
                 goto exit;
 
             foreach (var stat in stats.Children)
@@ -144,11 +144,15 @@ namespace DBD_API.Services
                 if (statName == null || statName.Equals(default(KeyValue)))
                     continue;
 
+                
                 var statValue = response.Stats.FirstOrDefault(x => Convert.ToString(x.stat_id) == stat.Name);
                 if (statValue == null || statValue.Equals(default(CMsgClientGetUserStatsResponse.Stats)))
                     continue;
 
-                results.TryAdd(statName.Value, statValue.stat_value);
+                if(statName.Value.EndsWith("_float"))
+                    results.TryAdd(statName.Value, BitConverter.ToSingle(BitConverter.GetBytes(statValue.stat_value)));
+                else
+                    results.TryAdd(statName.Value, statValue.stat_value);
             }
 
         exit:

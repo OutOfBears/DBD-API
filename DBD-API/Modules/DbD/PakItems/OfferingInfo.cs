@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using UnrealTools.Core;
 using TaggedItem = System.Collections.Generic.KeyValuePair<string, UnrealTools.Objects.Interfaces.IProperty>;
 using Property = UnrealTools.Objects.Interfaces.IProperty;
 
-namespace DBD_API.Modules.DbD.Items
+namespace DBD_API.Modules.DbD.PakItems
 {
     using TaggedItemsList = System.Collections.Generic.List<TaggedItem>;
     public class OfferingInfo : BaseItem
     {
+        [JsonPropertyName("offeringType")]
         public string OfferingType { get; private set; }
+
+        [JsonPropertyName("canUseAfterEventEnd")]
         public bool CanUseAfterEventEnd { get; private set; }
         
         public OfferingInfo(TaggedItemsList itemList) : base(itemList) 

@@ -2,11 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DBD_API.Modules.DbD;
-using DBD_API.Modules.DbD.Items;
+using DBD_API.Modules.DbD.PakItems;
 using Microsoft.Extensions.Hosting;
 
 using DBD_API.Modules.Steam;
@@ -22,16 +23,19 @@ using UnrealTools.Objects.Classes;
 using UnrealTools.Objects.Structures;
 using UnrealTools.Pak;
 
-using CustomItemInfo = DBD_API.Modules.DbD.Items.CustomItemInfo;
+using CustomItemInfo = DBD_API.Modules.DbD.PakItems.CustomItemInfo;
 using LocalizationTable = UnrealTools.Core.Interfaces.IUnrealLocalizationProvider;
 
 namespace DBD_API.Services
 {
     public class SteamDepotService : IHostedService
     {
+        private static string Deliminator = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "/" : "\\";
+
         private static readonly Regex[] FileDownloadList = 
         {
-            new Regex(@"(Paks\\pakchunk0\-WindowsNoEditor\.pak)$"),
+            new Regex(@"(Paks\" + Deliminator +  @"pakchunk0\-WindowsNoEditor\.pak)$"),
+            new Regex(@"(UI\" + Deliminator +  @".*?\.png)$"), 
         };
 
         private static readonly object[] AppDownloadList = 
@@ -79,7 +83,7 @@ namespace DBD_API.Services
         }
         
         private async Task LoadDBFromPak<T>(PakVFS pakReader, LocalizationTable localization, ConcurrentDictionary<string, T> itemDB, string dbName, string typeName = "",
-            Action<TaggedObject, T> onRowRead = null)
+            Func<TaggedObject, T, Task> onRowRead = null)
         {
             if (string.IsNullOrEmpty(typeName))
                 typeName = dbName;
@@ -101,9 +105,22 @@ namespace DBD_API.Services
                     {
                         var item = (T) Activator.CreateInstance(typeof(T), itemInfo.Vars);
                         itemDB[itemName] = item;
-                        onRowRead?.Invoke(itemInfo, item);
+
+                        if(onRowRead != null)
+                            await onRowRead.Invoke(itemInfo, item);
                     }
                 }
+        }
+
+        private async Task ReadMapInfo(PakVFS pakReader, LocalizationTable localization, string branch)
+        {
+            if (!_dbdService.MapInfos.TryGetValue(branch, out var mapInfos))
+            {
+                mapInfos = new ConcurrentDictionary<string, MapInfo>();
+                _dbdService.MapInfos[branch] = mapInfos;
+            }
+
+            await LoadDBFromPak(pakReader, localization, mapInfos, "ProceduralMaps");
         }
 
         private async Task ReadPerkInfo(PakVFS pakReader, LocalizationTable localization, string branch)
@@ -161,14 +178,9 @@ namespace DBD_API.Services
             await LoadDBFromPak(pakReader, localization, itemInfos, "ItemDB", "CustomizationItemDB");
         }
 
-        private async Task ReadTunableInfo(PakVFS pakReader, LocalizationTable localization, string branch, string name, string tunable)
+        private async Task ReadTunableInfo(PakVFS pakReader, LocalizationTable localization, string branch, string name, string tunable,
+            ConcurrentDictionary<string, TunableInfo> tunableInfos)
         {
-            if (!_dbdService.TunableInfos.TryGetValue(branch, out var tunableInfos))
-            {
-                tunableInfos = new ConcurrentDictionary<string, TunableInfo>();
-                _dbdService.TunableInfos[branch] = tunableInfos;
-            }
-
             tunable = _tunableRegexFix.Replace(tunable, ".uasset");
             tunable = tunable.Replace("/Game/", "DeadByDaylight/Content/");
 
@@ -193,6 +205,69 @@ namespace DBD_API.Services
             }
         }
 
+        private async Task ReadTunablesInfo(PakVFS pakReader, LocalizationTable localization, string branch)
+        {
+            if (!_dbdService.CharacterInfos.TryGetValue(branch, out var characterInfos))
+                return;
+
+            if (!_dbdService.TunableInfos.TryGetValue(branch, out var tunableInfos))
+            {
+                tunableInfos = new TunableContainer();
+                _dbdService.TunableInfos[branch] = tunableInfos;
+            }
+
+            var miscTunables = pakReader.AbsoluteIndex.FirstOrDefault(x => x.Key.EndsWith("KillerTunableDB.uasset"));
+            if (!miscTunables.Equals(default))
+                await ReadTunableInfo(pakReader, localization, branch, "Killer", miscTunables.Key,
+                    tunableInfos.BaseTunables);
+
+            miscTunables = pakReader.AbsoluteIndex.FirstOrDefault(x => x.Key.EndsWith("SurvivorTunableDB.uasset"));
+            if (!miscTunables.Equals(default))
+                await ReadTunableInfo(pakReader, localization, branch, "Survivor", miscTunables.Key,
+                    tunableInfos.BaseTunables);
+
+
+            var regex = new Regex(@"^(\/Game\/Data\/Dlc\/\w+\/).*?$");
+            var otherRegex = new Regex(@"^.*Dlc\/(.*?)\/TunableValuesDB\.uasset$");
+
+            var matchedTunableValues = new List<string>();
+
+            foreach (var characterTunable in characterInfos.Where(x => x.Value.TunablePath != "None"))
+            {
+                var character = characterTunable.Value;
+                var match = regex.Match(character.TunablePath);
+                await ReadTunableInfo(pakReader, localization, branch, character.IdName, character.TunablePath,
+                    tunableInfos.KillerTunables);
+
+                if (!match.Success)
+                    continue;
+
+                var matchPath = match.Groups[1].Value.Replace("/Game/", "DeadByDaylight/Content/")
+                    + "TunableValuesDB.uasset";
+                var tunableValueKv = pakReader.AbsoluteIndex.FirstOrDefault(x =>
+                    x.Key == matchPath);
+                if (tunableValueKv.Key == null)
+                    continue;
+
+                await ReadTunableInfo(pakReader, localization, branch, character.IdName, tunableValueKv.Key,
+                    tunableInfos.KnownTunableValues);
+
+                matchedTunableValues.Add(tunableValueKv.Key);
+            }
+
+            foreach (var tunableValues in pakReader.AbsoluteIndex.Where(x => x.Key.EndsWith("TunableValuesDB.uasset") &&
+                                                                             !matchedTunableValues.Contains(x.Key)))
+            {
+                var path = tunableValues.Key;
+                var name = otherRegex.Match(path);
+                if (!name.Success)
+                    continue;
+
+                await ReadTunableInfo(pakReader, localization, branch, $"{name.Groups[1].Value}TunableValues", path,
+                    tunableInfos.UnknownTunableValues);
+            }
+        }
+
         private async Task ReadCharacterInfo(PakVFS pakReader, LocalizationTable localization, string branch)
         {
             if (!_dbdService.CharacterInfos.TryGetValue(branch, out var characterInfos))
@@ -201,21 +276,25 @@ namespace DBD_API.Services
                 _dbdService.CharacterInfos[branch] = characterInfos;
             }
 
-            await LoadDBFromPak(pakReader, localization, characterInfos, "CharacterDescriptionDB", "",
+            await LoadDBFromPak(pakReader, localization, characterInfos, "CharacterDescriptionDB");
+
+            /*await LoadDBFromPak(pakReader, localization, characterInfos, "CharacterDescriptionDB", "",
                 async (obj, parsedObj) =>
                 {
                     var tunableKv = obj.Vars.FirstOrDefault(x => x.Key == "TunableDB");
                     if (tunableKv.Equals(default) || !(tunableKv.Value.Value is TaggedObject tunable))
                         return;
-                        
+
                     var ptrKv = tunable.Vars.FirstOrDefault(x => x.Key == "AssetPtr");
                     if (ptrKv.Equals(default) || !(ptrKv.Value.Value is var softObj))
                         return;
 
                     var path = softObj.ToString();
                     if (path != "None" && !string.IsNullOrEmpty(parsedObj.IdName))
-                        await ReadTunableInfo(pakReader, localization, branch, parsedObj.IdName, path);
+                        await ReadTunablesInfo(pakReader, localization, branch, parsedObj.IdName, path);
                 });
+            */
+
         }
 
         // TODO: implement
@@ -252,16 +331,19 @@ namespace DBD_API.Services
                 var pakReader = await PakVFS.OpenAtAsync($"data/{appId}/{branch}/Paks");
                 var localization = await ReadLocalization(pakReader);
 
+                await ReadMapInfo(pakReader, localization, branch);
                 await ReadPerkInfo(pakReader, localization, branch);
                 await ReadOfferingInfo(pakReader, localization, branch);
                 await ReadCustomItemInfo(pakReader, localization, branch);
                 await ReadCharacterInfo(pakReader, localization, branch);
                 await ReadItemAddonInfo(pakReader, localization, branch);
                 await ReadItemInfo(pakReader, localization, branch);
+                await ReadTunablesInfo(pakReader, localization, branch);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("[Steam] Failed to read paks for app {1} '{0}': {2}", branch, appId, ex.Message);
+                Console.WriteLine("[Steam] Stacktrace: {0}", ex.StackTrace);
             }
         }
 
@@ -272,9 +354,16 @@ namespace DBD_API.Services
 
             Console.WriteLine("[Steam] Got {0} licenses", _steamService.Licenses.Count);
 
-            foreach (dynamic app in AppDownloadList)
-                await DownloadAppAsync((uint) app.AppId, (string) app.Branch);
+            try
+            {
+                foreach (dynamic app in AppDownloadList)
+                    await DownloadAppAsync((uint) app.AppId, (string) app.Branch);
 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to download app: {0}", ex);
+            }
 
         }
 
