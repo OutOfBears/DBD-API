@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using UnrealTools.Core;
-using UnrealTools.Objects.Classes;
-using TaggedItem = System.Collections.Generic.KeyValuePair<string, UnrealTools.Objects.Classes.TaggedObject>;
+using UETools.Core;
+using UETools.Objects.Classes;
+using TaggedItem = System.Collections.Generic.KeyValuePair<string, UETools.Objects.Classes.TaggedObject>;
 
 namespace DBD_API.Modules.DbD.PakItems
 {

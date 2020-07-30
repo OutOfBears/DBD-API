@@ -85,14 +85,8 @@ namespace DBD_API
                 app.UseDeveloperExceptionPage();
             else
                 app.UseHsts();
-            
-            app.UseCors(builder =>
-            {
-                builder
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowAnyOrigin();
-            });
+
+            app.UseHttpsRedirection();
 
             app.UseStaticFiles(new StaticFileOptions
             {
@@ -101,8 +95,17 @@ namespace DBD_API
                 RequestPath = "/data"
             });
 
-            app.UseHttpsRedirection();
+
             app.UseRouting();
+
+            app.UseCors(builder =>
+            {
+                builder
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowAnyOrigin();
+            });
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
@@ -110,6 +113,7 @@ namespace DBD_API
             });
 
             app.UseSpaStaticFiles();
+
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";

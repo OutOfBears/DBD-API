@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DBD_API.Services
 {
@@ -12,12 +13,15 @@ namespace DBD_API.Services
         private Task _eventLoop;
         private CancellationTokenSource _cancelEventLoop;
         private readonly SteamService _steamService;
+        private readonly ILogger<SteamEventService> _logger;
 
         public SteamEventService(
-            SteamService steamService
+            SteamService steamService,
+            ILogger<SteamEventService> logger
         )
         {
             _steamService = steamService;
+            _logger = logger;
         }
 
         // utter cancer lol
@@ -29,7 +33,7 @@ namespace DBD_API.Services
             //eventLoop = RunEventLoop(cancelEventLoop.Token);
             _eventLoop = Task.Factory.StartNew(() =>
             {
-                Console.WriteLine("[Steam] event-loop start!");
+                _logger.LogInformation("event-loop start!");
                 while (!_cancelEventLoop.Token.IsCancellationRequested && _steamService.KeepAlive)
                     _steamService.Manager.RunWaitCallbacks();
             }, _cancelEventLoop.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -39,7 +43,7 @@ namespace DBD_API.Services
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("Stopping service...");
+            _logger.LogInformation("Stopping service...");
             if (_steamService.KeepAlive && _eventLoop != null)
             {
                 _steamService.KeepAlive = false;

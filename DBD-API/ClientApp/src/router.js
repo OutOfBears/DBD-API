@@ -14,12 +14,12 @@ Vue.use(Router);
 const router = new Router({
   mode: 'history',
   routes: [
-    { path: '/',                name: 'news',             component: News },
-    { path: '/perks',           name: 'perks',            component: Perks },
-    { path: '/characters',      name: 'characters',       component: Characters, },
-    { path: '/characters/:id',  name: 'character-info',   component: CharacterInfo, },
-    { path: '/offerings',       name: 'offerings',        component: Offerings },
-    { path: '/shrine',          name: 'shrine',           component: Shrine }
+    { path: '/',                name: 'characters',     component: Characters, },
+    { path: '/characters/:id',  name: 'character-info', component: CharacterInfo, },
+    { path: '/perks',           name: 'perks',          component: Perks },
+    { path: '/offerings',       name: 'offerings',      component: Offerings },
+    { path: '/shrine',          name: 'shrine',         component: Shrine },
+    { path: '/new',             name: 'news',           component: News },
   ]
 });
 

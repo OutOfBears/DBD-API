@@ -16,15 +16,15 @@ using Microsoft.AspNetCore.Mvc.Diagnostics;
 using Microsoft.Extensions.Logging;
 using SteamKit2;
 using SteamKit2.Unified.Internal;
-using UnrealTools.Assets;
-using UnrealTools.Core.Enums;
-using UnrealTools.Core.Interfaces;
-using UnrealTools.Objects.Classes;
-using UnrealTools.Objects.Structures;
-using UnrealTools.Pak;
+using UETools.Assets;
+using UETools.Core.Enums;
+using UETools.Core.Interfaces;
+using UETools.Objects.Classes;
+using UETools.Objects.Structures;
+using UETools.Pak;
 
 using CustomItemInfo = DBD_API.Modules.DbD.PakItems.CustomItemInfo;
-using LocalizationTable = UnrealTools.Core.Interfaces.IUnrealLocalizationProvider;
+using LocalizationTable = UETools.Core.Interfaces.IUnrealLocalizationProvider;
 
 namespace DBD_API.Services
 {
@@ -98,7 +98,7 @@ namespace DBD_API.Services
                     var dataTable = asset.GetAssets()
                         .FirstOrDefault(x => x.FullName == $"DataTable {typeName}");
 
-                    if (dataTable == null || !(dataTable.Object is UnrealTools.Objects.Classes.DataTable items))
+                    if (dataTable == null || !(dataTable.Object is UETools.Objects.Classes.DataTable items))
                         continue;
 
                     foreach (var (itemName, itemInfo) in items.Rows)
@@ -322,7 +322,7 @@ namespace DBD_API.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[Steam] Failed to download app {1} '{0}': {2}", branch, appId, ex.Message);
+                _logger.LogError("Failed to download app {1} '{0}': {2}", branch, appId, ex.Message);
                 return;
             }
 
@@ -342,8 +342,8 @@ namespace DBD_API.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[Steam] Failed to read paks for app {1} '{0}': {2}", branch, appId, ex.Message);
-                Console.WriteLine("[Steam] Stacktrace: {0}", ex.StackTrace);
+                _logger.LogError("Failed to read paks for app {1} '{0}': {2}", branch, appId, ex.Message);
+                _logger.LogTrace("Stacktrace: {0}", ex.StackTrace);
             }
         }
 
@@ -352,7 +352,7 @@ namespace DBD_API.Services
             if (!_steamService.LicenseCompletionSource.Task.IsCompleted)
                 await _steamService.LicenseCompletionSource.Task;
 
-            Console.WriteLine("[Steam] Got {0} licenses", _steamService.Licenses.Count);
+            _logger.LogInformation("Got {0} licenses", _steamService.Licenses.Count);
 
             try
             {
@@ -362,7 +362,7 @@ namespace DBD_API.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Failed to download app: {0}", ex);
+                _logger.LogError("Failed to download app: {0}", ex);
             }
 
         }

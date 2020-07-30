@@ -8,3 +8,5 @@ DBD-API/manifest_cache/
 DBD-API/data/
 
 DBD-API.sln.DotSettings.user
+
+DBD-API/config.json

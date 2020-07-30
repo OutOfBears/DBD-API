@@ -3,6 +3,7 @@
 
 using DBD_API.Modules.Steam;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SteamKit2;
 using SteamKit2.Internal;
 using System;
@@ -24,6 +25,7 @@ namespace DBD_API.Services
     public class SteamService
     {
         private readonly IConfiguration _config;
+        private readonly ILogger<SteamService> _logger;
 
         public readonly TaskCompletionSource<bool> LicenseCompletionSource;
         public LicenseList Licenses;
@@ -42,11 +44,12 @@ namespace DBD_API.Services
         private SteamApps _apps;
         private SteamUserStats _userStats;
 
-        public SteamService(IConfiguration config)
+        public SteamService(IConfiguration config, ILogger<SteamService> logger)
         {
             Connected = false;
             KeepAlive = true;
             _config = config;
+            _logger = logger;
 
             _gcTokens = new ConcurrentQueue<byte[]>();
             _gcTokensComplete = new TaskCompletionSource<bool>();
@@ -224,18 +227,18 @@ namespace DBD_API.Services
         {
             if (obj.Result != EResult.OK)
             {
-                Console.WriteLine("[Steam] Login denied, reason: {0}", obj.Result);
+                _logger.LogError("Login denied, reason: {0}", obj.Result);
                 Client.Disconnect();
                 return;
             }
 
             Connected = true;
-            Console.WriteLine("[Steam] We are connected! (user={0})", _config["steam_user"]);
+            _logger.LogInformation("We are connected! (user={0})", _config["steam_user"]);
         }
 
         public void OnMachineAuth(SteamUser.UpdateMachineAuthCallback obj)
         {
-            Console.WriteLine("[Steam] Writing sentry-file...");
+            _logger.LogInformation("Writing sentry-file...");
             int sentrySize;
             byte[] sentryHash;
 
@@ -263,12 +266,12 @@ namespace DBD_API.Services
                 SentryFileHash = sentryHash
             });
 
-            Console.WriteLine("[Steam] Finished writing sentry-file!");
+            _logger.LogInformation("Finished writing sentry-file!");
         }
 
         private void OnConnected(SteamClient.ConnectedCallback obj)
         {
-            Console.WriteLine("[Steam] Connected to steam! Logging in as '{0}'...",
+            _logger.LogInformation("Connected to steam! Logging in as '{0}'...",
                 _config["steam_user"]);
 
             byte[] sentryHash = null;
@@ -290,7 +293,7 @@ namespace DBD_API.Services
 
         private void OnDisconnected(SteamClient.DisconnectedCallback obj)
         {
-            Console.WriteLine("[Steam] Disconnected from steam!");
+            _logger.LogInformation("Disconnected from steam!");
             // Console.WriteLine(Environment.StackTrace);
             Connected = false;
 

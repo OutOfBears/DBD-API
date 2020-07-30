@@ -16,12 +16,15 @@ using System.Text;
 using System.Threading.Tasks;
 using DBD_API.Modules.DbD.JsonResponse;
 using SteamKit2.GC.Underlords.Internal;
+using System.Net.Http;
+using Microsoft.Extensions.Logging;
 
 namespace DBD_API.Services
 {
     public class DdbService
     {
         // static
+        private const string UserAgent = "DeadByDaylight/++DeadByDaylight+Live-CL-296874 Windows/10.0.18363.1.256.64bit";
 
         public static readonly string[] AllowedPrefixes =
         {
@@ -43,7 +46,7 @@ namespace DBD_API.Services
         public ConcurrentDictionary<string, TunableContainer> TunableInfos;
 
         private readonly IConfiguration _config;
-
+        private readonly ILogger<DdbService> _logger;
         
         private CookieContainer _cookieJar;
         private CacheService _cacheService;
@@ -54,11 +57,13 @@ namespace DBD_API.Services
         private string _dbdVersion;
 
         public DdbService(
+            ILogger<DdbService> logger,
             CacheService cacheService,
             IConfiguration config
         )
         {
             _cacheService = cacheService;
+            _logger = logger;
             _config = config;
 
             _dbdVersion = null;
@@ -80,7 +85,7 @@ namespace DBD_API.Services
 
             foreach (var api in AllowedPrefixes)
             {
-                _restClients[api] = CreateDBDRestClient($"latest.{api}.dbd.bhvronline.com");
+                _restClients[api] = CreateDBDRestClient($"steam.{api}.bhvrdbd.com");
                 _restCdnClients[api] = CreateDBDRestClient($"cdn.{api}.dbd.bhvronline.com");
             }
         }
@@ -88,7 +93,7 @@ namespace DBD_API.Services
         private RestClient CreateDBDRestClient(string baseUrl)
             => new RestClient($"https://{baseUrl}")
             {
-                UserAgent = "game=DeadByDaylight, engine=UE4, version=4.13.2-0+UE4",
+                UserAgent = UserAgent,
                 CookieContainer = _cookieJar
             };
 
@@ -135,26 +140,49 @@ namespace DBD_API.Services
             if (cache) 
                 await _cacheService.CacheRequest(request, response, branch, ttl);
 
+#if DEBUG
+            if (response != null)
+            {
+                _logger.LogDebug("Request: {0} {1} -> {2}", request.Method.ToString(),
+                    request.Resource, response.StatusCode);
+
+                if(response.StatusCode != HttpStatusCode.OK)
+                {
+                    _logger.LogError("Response (NOT OK) ->\n{0}", response.Content);
+                }
+            }
+#endif
+
             return response;
         }
 
-        private void UpdateDbdVersion(string branch = "live", string config = "")
+        private string UpdateDbdVersion(string branch = "live", string config = "", bool fromMainConfig = true)
         {
             if (string.IsNullOrEmpty(config))
-                return;
+                return null;
 
             try
             {
-                var configData = JArray.Parse(config);
-                var versions = configData.Children<JObject>()
-                    .FirstOrDefault(x => x.GetValue("keyName").ToString() == "VER_CLIENT_DATA");
+                JObject versions;
+
+                if (fromMainConfig)
+                {
+                    var configData = JArray.Parse(config);
+                    versions = configData.Children<JObject>()
+                        .FirstOrDefault(x => x.GetValue("keyName").ToString() == "VER_CLIENT_DATA");
+                }
+                else
+                {
+                    var versionData = JObject.Parse(config);
+                    versions = (JObject)versionData["availableVersions"];
+                }
 
                 if (versions == null || versions.Equals(default))
-                    return;
+                    return null;
 
 
                 var version = "";
-                foreach (KeyValuePair<string, JToken> versionKV in (JObject)versions["value"])
+                foreach (KeyValuePair<string, JToken> versionKV in fromMainConfig ? (JObject)versions["value"] : versions)
                 {
                     if (versionKV.Key.StartsWith("m_"))
                         break;
@@ -162,12 +190,17 @@ namespace DBD_API.Services
                     version = versionKV.Key;
                 }
 
-                _dbdVersion = version;
+                if(fromMainConfig) 
+                    _dbdVersion = version;
+
+                return version;
             }
             catch
             {
                 // failed
             }
+
+            return null;
         }
 
         /*
@@ -183,6 +216,22 @@ namespace DBD_API.Services
         }
         */
 
+        public async Task<string> GetCurrentDBDVersion(string branch = "live")
+        {
+            RestClient client;
+            if (!_restClients.TryGetValue(branch, out client))
+                return null;
+
+            var verRequest = new RestRequest("api/v1/utils/contentVersion/version", Method.GET); 
+            verRequest.AddHeader("User-Agent", UserAgent);
+
+            var verResponse = await client.ExecuteGetTaskAsync(verRequest);
+            if (verResponse.StatusCode != HttpStatusCode.OK)
+                return null;
+
+            return UpdateDbdVersion(branch, verResponse.Content, false);
+        }
+
         public async Task<bool> UpdateSessionToken(string branch = "live")
         {
             //var token = await GetSteamSessionToken();
@@ -190,16 +239,27 @@ namespace DBD_API.Services
             if (!_restClients.ContainsKey(branch))
                 return false;
 
+            var version = await GetCurrentDBDVersion(branch);
+            if (string.IsNullOrEmpty(version))
+                return false;
+
+
             var request = new RestRequest("api/v1/auth/login/guest", Method.POST);
             //var request = new RestRequest("api/v1/auth/provider/steam/login");
             // request.AddQueryParameter("token", token);
             request.AddJsonBody(new
             {
-                clientData = new { consentId = "2" }
+                clientData = new
+                {
+                    catalogId = version,
+                    gameContentId = version,
+                    consentId = version
+                }
             });
 
             var response = await _restClients[branch].ExecutePostTaskAsync(request);
-            if(response.StatusCode == HttpStatusCode.OK)
+
+            if (response.StatusCode == HttpStatusCode.OK)
                 foreach(var cookie in response.Cookies)
                 {
                     if (cookie.Name != "bhvrSession" || string.IsNullOrEmpty(cookie.Value)) continue;
@@ -210,6 +270,7 @@ namespace DBD_API.Services
 
                     return true;
                 }
+
 
             return false;
         }

@@ -46,15 +46,12 @@
     <PackageReference Include="SharpZipLib" Version="1.2.0" />
     <PackageReference Include="SmartFormat.NET" Version="2.5.0" />
     <PackageReference Include="SteamKit2" Version="2.2.0" />
+    <PackageReference Include="UETools.Assets" Version="0.2.3" />
+    <PackageReference Include="UETools.Core" Version="0.2.3" />
+    <PackageReference Include="UETools.Objects" Version="0.2.3" />
+    <PackageReference Include="UETools.Pak" Version="0.2.3" />
+    <PackageReference Include="UETools.TypeFactory" Version="0.2.3" />
     <PackageReference Include="zlib.net" Version="1.0.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Assets\UnrealTools.Assets.csproj" />
-    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Core\UnrealTools.Core.csproj" />
-    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Objects\UnrealTools.Objects.csproj" />
-    <ProjectReference Include="..\UnrealTools\src\UnrealTools.Pak\UnrealTools.Pak.csproj" />
-    <ProjectReference Include="..\UnrealTools\src\UnrealTools.TypeFactory\UnrealTools.TypeFactory.csproj" />
   </ItemGroup>
 
   <ItemGroup>

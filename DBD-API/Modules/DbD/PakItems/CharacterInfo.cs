@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using SteamKit2.Unified.Internal;
-using UnrealTools.Core;
-using UnrealTools.Objects.Classes;
-using TaggedItem = System.Collections.Generic.KeyValuePair<string, UnrealTools.Objects.Interfaces.IProperty>;
-using Property = UnrealTools.Objects.Interfaces.IProperty;
+using UETools.Core;
+using UETools.Objects.Classes;
+using TaggedItem = System.Collections.Generic.KeyValuePair<string, UETools.Objects.Interfaces.IProperty>;
+using Property = UETools.Objects.Interfaces.IProperty;
 
 namespace DBD_API.Modules.DbD.PakItems
 {
