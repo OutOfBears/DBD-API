@@ -77,7 +77,7 @@ namespace DBD_API.Services
 
             await using var data = await localizationTable.Value.ReadAsync();
             data.Version = UE4Version.VER_UE4_AUTOMATIC_VERSION;
-            LocResAsset.English.Deserialize(data);
+            LocResAsset.English.Serialize(data);
             return LocResAsset.English;
 
         }
@@ -93,12 +93,13 @@ namespace DBD_API.Services
                 {
                     data.Version = UE4Version.VER_UE4_AUTOMATIC_VERSION;
                     data.Localization = localization;
-                    data.Read(out UAssetAsset asset);
+                    UAssetAsset asset = null;
+                    data.Read(ref asset);
 
-                    var dataTable = asset.GetAssets()
-                        .FirstOrDefault(x => x.FullName == $"DataTable {typeName}");
+                    var dataTable = asset.GetExportsOfType<DataTable>()
+                        .FirstOrDefault();
 
-                    if (dataTable == null || !(dataTable.Object is UETools.Objects.Classes.DataTable items))
+                    if (!(dataTable is DataTable items))
                         continue;
 
                     foreach (var (itemName, itemInfo) in items.Rows)
@@ -175,7 +176,7 @@ namespace DBD_API.Services
                 _dbdService.CustomItemInfos[branch] = itemInfos;
             }
 
-            await LoadDBFromPak(pakReader, localization, itemInfos, "ItemDB", "CustomizationItemDB");
+            await LoadDBFromPak(pakReader, localization, itemInfos, "CustomizationItemDB");
         }
 
         private async Task ReadTunableInfo(PakVFS pakReader, LocalizationTable localization, string branch, string name, string tunable,
@@ -193,12 +194,13 @@ namespace DBD_API.Services
             {
                 data.Version = UE4Version.VER_UE4_AUTOMATIC_VERSION;
                 data.Localization = localization;
-                data.Read(out UAssetAsset asset);
+                UAssetAsset asset = null;
+                data.Read(ref asset);
 
-                var dataTable = asset.GetAssets()
-                    .FirstOrDefault(x => x.FullName.StartsWith("DataTable"));
+                var dataTable = asset.GetExportsOfType<DataTable>()
+                    .FirstOrDefault();
 
-                if (dataTable == null || !(dataTable.Object is DataTable items))
+                if (!(dataTable is DataTable items))
                     return;
 
                 tunableInfos[name] = new TunableInfo(items.Rows);
