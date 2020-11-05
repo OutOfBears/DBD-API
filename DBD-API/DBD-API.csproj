@@ -46,11 +46,11 @@
     <PackageReference Include="SharpZipLib" Version="1.2.0" />
     <PackageReference Include="SmartFormat.NET" Version="2.5.0" />
     <PackageReference Include="SteamKit2" Version="2.2.0" />
-    <PackageReference Include="UETools.Assets" Version="0.2.3" />
-    <PackageReference Include="UETools.Core" Version="0.2.3" />
-    <PackageReference Include="UETools.Objects" Version="0.2.3" />
-    <PackageReference Include="UETools.Pak" Version="0.2.3" />
-    <PackageReference Include="UETools.TypeFactory" Version="0.2.3" />
+    <PackageReference Include="UETools.Assets" Version="0.3.1" />
+    <PackageReference Include="UETools.Core" Version="0.3.1" />
+    <PackageReference Include="UETools.Objects" Version="0.3.1" />
+    <PackageReference Include="UETools.Pak" Version="0.3.1" />
+    <PackageReference Include="UETools.TypeFactory" Version="0.3.1" />
     <PackageReference Include="zlib.net" Version="1.0.4" />
   </ItemGroup>
 
